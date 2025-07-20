@@ -1,0 +1,1360 @@
+# Convex Rules & Best Practices
+
+## 🎯 Core Principles
+
+### 1. **Real-Time First Development**
+
+- Design for real-time by default with reactive queries
+- Use Convex as the source of truth for dynamic, collaborative data
+- Leverage automatic subscriptions for live updates
+- Implement optimistic updates for better user experience
+
+### 2. **Type-Safe Backend Functions**
+
+- Always use TypeScript with strict typing for all functions
+- Leverage Convex's built-in type inference and validation
+- Define explicit schemas for all data structures
+- Use Zod for additional runtime validation when needed
+
+### 3. **Serverless-First Architecture**
+
+- Keep functions lightweight and focused on single responsibilities
+- Use actions for external API calls and side effects
+- Implement proper error handling and logging
+- Design for horizontal scaling and stateless operations
+
+## 🏗️ Project Configuration & Setup
+
+### 1. **Convex Configuration**
+
+```json
+// convex.json
+{
+  "functions": "./src/convex",
+  "generateCommonJSApi": false,
+  "node": {
+    "externalPackages": ["sharp", "canvas"]
+  }
+}
+```
+
+### 2. **Environment Variables**
+
+```typescript
+// src/env.ts - Convex environment configuration
+export const env = createEnv({
+  server: {
+    CONVEX_DEPLOYMENT: z.string().optional(),
+    // External service keys for actions
+    OPENAI_API_KEY: z.string(),
+    RESEND_API_KEY: z.string().optional()
+  },
+  client: {
+    NEXT_PUBLIC_CONVEX_URL: z.string().url()
+  },
+  runtimeEnv: {
+    CONVEX_DEPLOYMENT: process.env.CONVEX_DEPLOYMENT,
+    NEXT_PUBLIC_CONVEX_URL: process.env.NEXT_PUBLIC_CONVEX_URL
+  }
+});
+```
+
+### 3. **Client Setup**
+
+```typescript
+// src/config/convex.ts
+import { ConvexReactClient } from 'convex/react';
+
+import { env } from '@/env';
+
+export const convexClient = new ConvexReactClient(env.NEXT_PUBLIC_CONVEX_URL);
+
+// For server-side usage
+export const convexServerClient = new ConvexHttpClient(env.NEXT_PUBLIC_CONVEX_URL);
+```
+
+## 📋 Schema Definition Patterns
+
+### 1. **Comprehensive Schema Structure**
+
+```typescript
+// src/convex/schema.ts
+import { defineSchema, defineTable } from 'convex/server';
+import { v } from 'convex/values';
+
+const schema = defineSchema({
+  // User management
+  users: defineTable({
+    name: v.string(),
+    email: v.string(),
+    image: v.optional(v.string()),
+    role: v.union(v.literal('admin'), v.literal('user'), v.literal('moderator')),
+    preferences: v.object({
+      theme: v.union(v.literal('light'), v.literal('dark'), v.literal('system')),
+      notifications: v.boolean(),
+      language: v.string()
+    }),
+    metadata: v.optional(v.any()),
+    createdAt: v.number(),
+    updatedAt: v.number()
+  })
+    .index('by_email', ['email'])
+    .index('by_role', ['role'])
+    .index('by_created_at', ['createdAt']),
+
+  // Real-time messaging
+  channels: defineTable({
+    name: v.string(),
+    description: v.optional(v.string()),
+    type: v.union(v.literal('public'), v.literal('private'), v.literal('direct')),
+    ownerId: v.id('users'),
+    memberIds: v.array(v.id('users')),
+    settings: v.object({
+      allowFiles: v.boolean(),
+      maxMembers: v.optional(v.number())
+    }),
+    createdAt: v.number(),
+    updatedAt: v.number()
+  })
+    .index('by_owner', ['ownerId'])
+    .index('by_type', ['type'])
+    .index('by_member', ['memberIds']),
+
+  messages: defineTable({
+    content: v.string(),
+    authorId: v.id('users'),
+    channelId: v.id('channels'),
+    type: v.union(v.literal('text'), v.literal('image'), v.literal('file')),
+    attachments: v.optional(
+      v.array(
+        v.object({
+          name: v.string(),
+          url: v.string(),
+          size: v.number(),
+          type: v.string()
+        })
+      )
+    ),
+    editedAt: v.optional(v.number()),
+    replyToId: v.optional(v.id('messages')),
+    reactions: v.optional(
+      v.array(
+        v.object({
+          emoji: v.string(),
+          userIds: v.array(v.id('users')),
+          count: v.number()
+        })
+      )
+    ),
+    createdAt: v.number()
+  })
+    .index('by_channel', ['channelId'])
+    .index('by_author', ['authorId'])
+    .index('by_created_at', ['createdAt'])
+    .index('by_channel_created_at', ['channelId', 'createdAt']),
+
+  // File storage
+  files: defineTable({
+    name: v.string(),
+    type: v.string(),
+    size: v.number(),
+    storageId: v.id('_storage'),
+    uploadedBy: v.id('users'),
+    metadata: v.optional(
+      v.object({
+        width: v.optional(v.number()),
+        height: v.optional(v.number()),
+        duration: v.optional(v.number())
+      })
+    ),
+    createdAt: v.number()
+  })
+    .index('by_uploader', ['uploadedBy'])
+    .index('by_type', ['type']),
+
+  // Analytics and events
+  events: defineTable({
+    type: v.string(),
+    userId: v.optional(v.id('users')),
+    data: v.any(),
+    sessionId: v.optional(v.string()),
+    timestamp: v.number()
+  })
+    .index('by_type', ['type'])
+    .index('by_user', ['userId'])
+    .index('by_timestamp', ['timestamp']),
+
+  // Notifications
+  notifications: defineTable({
+    userId: v.id('users'),
+    type: v.string(),
+    title: v.string(),
+    message: v.string(),
+    data: v.optional(v.any()),
+    read: v.boolean(),
+    createdAt: v.number()
+  })
+    .index('by_user', ['userId'])
+    .index('by_user_read', ['userId', 'read'])
+    .index('by_created_at', ['createdAt'])
+});
+
+export default schema;
+```
+
+### 2. **Type Definitions**
+
+```typescript
+// src/convex/types.ts
+import type { DataModelFromSchemaDefinition } from 'convex/server';
+
+import type schema from './schema';
+
+export type Schema = DataModelFromSchemaDefinition<typeof schema>;
+
+// Table types
+export type User = Schema['users']['document'];
+export type Channel = Schema['channels']['document'];
+export type Message = Schema['messages']['document'];
+export type File = Schema['files']['document'];
+export type Event = Schema['events']['document'];
+export type Notification = Schema['notifications']['document'];
+
+// Input types for mutations
+export type CreateUserInput = Pick<User, 'name' | 'email' | 'role' | 'preferences'>;
+export type UpdateUserInput = Partial<Pick<User, 'name' | 'image' | 'preferences'>>;
+export type CreateChannelInput = Pick<
+  Channel,
+  'name' | 'description' | 'type' | 'settings'
+>;
+export type CreateMessageInput = Pick<
+  Message,
+  'content' | 'type' | 'attachments' | 'replyToId'
+>;
+
+// Query result types
+export type UserWithStats = User & {
+  messageCount: number;
+  channelsCount: number;
+  lastActivity: number;
+};
+
+export type ChannelWithMessages = Channel & {
+  messages: Message[];
+  memberCount: number;
+};
+
+export type MessageWithAuthor = Message & {
+  author: User;
+  replyTo?: Message;
+};
+```
+
+## 🔍 Query Patterns & Best Practices
+
+### 1. **Basic Query Functions**
+
+```typescript
+// src/convex/users.ts
+import { v } from 'convex/values';
+
+import { query } from './_generated/server';
+
+// Simple queries
+export const getUsers = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query('users').order('desc').collect();
+  }
+});
+
+export const getUserById = query({
+  args: { userId: v.id('users') },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.userId);
+  }
+});
+
+export const getUserByEmail = query({
+  args: { email: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query('users')
+      .withIndex('by_email', (q) => q.eq('email', args.email))
+      .unique();
+  }
+});
+
+// Paginated queries
+export const getUsersPaginated = query({
+  args: {
+    paginationOpts: v.object({
+      numItems: v.number(),
+      cursor: v.optional(v.string())
+    }),
+    filters: v.optional(
+      v.object({
+        role: v.optional(
+          v.union(v.literal('admin'), v.literal('user'), v.literal('moderator'))
+        ),
+        search: v.optional(v.string())
+      })
+    )
+  },
+  handler: async (ctx, args) => {
+    let query = ctx.db.query('users');
+
+    // Apply filters
+    if (args.filters?.role) {
+      query = query.withIndex('by_role', (q) => q.eq('role', args.filters.role));
+    }
+
+    // Apply search
+    if (args.filters?.search) {
+      query = query.filter((q) =>
+        q.or(
+          q.eq(q.field('name'), args.filters.search),
+          q.eq(q.field('email'), args.filters.search)
+        )
+      );
+    }
+
+    return await query.order('desc').paginate(args.paginationOpts);
+  }
+});
+
+// Complex queries with joins
+export const getUserWithStats = query({
+  args: { userId: v.id('users') },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) return null;
+
+    // Get user message count
+    const messageCount = await ctx.db
+      .query('messages')
+      .withIndex('by_author', (q) => q.eq('authorId', args.userId))
+      .collect()
+      .then((messages) => messages.length);
+
+    // Get user channels count
+    const channelsCount = await ctx.db
+      .query('channels')
+      .filter((q) => q.eq(q.field('memberIds'), args.userId))
+      .collect()
+      .then((channels) => channels.length);
+
+    // Get last activity
+    const lastMessage = await ctx.db
+      .query('messages')
+      .withIndex('by_author', (q) => q.eq('authorId', args.userId))
+      .order('desc')
+      .first();
+
+    return {
+      ...user,
+      messageCount,
+      channelsCount,
+      lastActivity: lastMessage?.createdAt ?? user.createdAt
+    };
+  }
+});
+```
+
+### 2. **Real-Time Query Patterns**
+
+```typescript
+// src/convex/messages.ts
+import { v } from 'convex/values';
+
+import { query } from './_generated/server';
+
+export const getChannelMessages = query({
+  args: {
+    channelId: v.id('channels'),
+    limit: v.optional(v.number())
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit ?? 50;
+
+    const messages = await ctx.db
+      .query('messages')
+      .withIndex('by_channel_created_at', (q) => q.eq('channelId', args.channelId))
+      .order('desc')
+      .take(limit);
+
+    // Enrich with author data
+    const messagesWithAuthors = await Promise.all(
+      messages.map(async (message) => {
+        const author = await ctx.db.get(message.authorId);
+        const replyTo = message.replyToId
+          ? await ctx.db.get(message.replyToId)
+          : undefined;
+
+        return {
+          ...message,
+          author,
+          replyTo
+        };
+      })
+    );
+
+    return messagesWithAuthors.reverse(); // Show oldest first
+  }
+});
+
+export const getUnreadNotifications = query({
+  args: { userId: v.id('users') },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query('notifications')
+      .withIndex('by_user_read', (q) => q.eq('userId', args.userId).eq('read', false))
+      .order('desc')
+      .collect();
+  }
+});
+```
+
+## 🔄 Mutation Patterns
+
+### 1. **Data Mutations**
+
+```typescript
+// src/convex/mutations.ts
+import { v } from 'convex/values';
+
+import { mutation } from './_generated/server';
+
+export const createUser = mutation({
+  args: {
+    name: v.string(),
+    email: v.string(),
+    role: v.optional(
+      v.union(v.literal('admin'), v.literal('user'), v.literal('moderator'))
+    ),
+    preferences: v.optional(
+      v.object({
+        theme: v.union(v.literal('light'), v.literal('dark'), v.literal('system')),
+        notifications: v.boolean(),
+        language: v.string()
+      })
+    )
+  },
+  handler: async (ctx, args) => {
+    // Check if user already exists
+    const existingUser = await ctx.db
+      .query('users')
+      .withIndex('by_email', (q) => q.eq('email', args.email))
+      .unique();
+
+    if (existingUser) {
+      throw new Error('User with this email already exists');
+    }
+
+    const now = Date.now();
+
+    return await ctx.db.insert('users', {
+      name: args.name,
+      email: args.email,
+      role: args.role ?? 'user',
+      preferences: args.preferences ?? {
+        theme: 'system',
+        notifications: true,
+        language: 'en'
+      },
+      createdAt: now,
+      updatedAt: now
+    });
+  }
+});
+
+export const updateUser = mutation({
+  args: {
+    userId: v.id('users'),
+    updates: v.object({
+      name: v.optional(v.string()),
+      image: v.optional(v.string()),
+      preferences: v.optional(
+        v.object({
+          theme: v.union(v.literal('light'), v.literal('dark'), v.literal('system')),
+          notifications: v.boolean(),
+          language: v.string()
+        })
+      )
+    })
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    return await ctx.db.patch(args.userId, {
+      ...args.updates,
+      updatedAt: Date.now()
+    });
+  }
+});
+
+export const deleteUser = mutation({
+  args: { userId: v.id('users') },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Soft delete: Update related data
+    const userMessages = await ctx.db
+      .query('messages')
+      .withIndex('by_author', (q) => q.eq('authorId', args.userId))
+      .collect();
+
+    // Delete user's messages
+    await Promise.all(userMessages.map((message) => ctx.db.delete(message._id)));
+
+    // Remove from channels
+    const userChannels = await ctx.db
+      .query('channels')
+      .filter((q) => q.eq(q.field('memberIds'), args.userId))
+      .collect();
+
+    await Promise.all(
+      userChannels.map((channel) =>
+        ctx.db.patch(channel._id, {
+          memberIds: channel.memberIds.filter((id) => id !== args.userId),
+          updatedAt: Date.now()
+        })
+      )
+    );
+
+    // Finally delete the user
+    return await ctx.db.delete(args.userId);
+  }
+});
+```
+
+### 2. **Real-Time Mutations**
+
+```typescript
+// src/convex/messages.ts
+import { v } from 'convex/values';
+
+import { mutation } from './_generated/server';
+
+export const sendMessage = mutation({
+  args: {
+    channelId: v.id('channels'),
+    authorId: v.id('users'),
+    content: v.string(),
+    type: v.optional(v.union(v.literal('text'), v.literal('image'), v.literal('file'))),
+    attachments: v.optional(
+      v.array(
+        v.object({
+          name: v.string(),
+          url: v.string(),
+          size: v.number(),
+          type: v.string()
+        })
+      )
+    ),
+    replyToId: v.optional(v.id('messages'))
+  },
+  handler: async (ctx, args) => {
+    // Verify channel exists and user is a member
+    const channel = await ctx.db.get(args.channelId);
+    if (!channel) {
+      throw new Error('Channel not found');
+    }
+
+    if (!channel.memberIds.includes(args.authorId)) {
+      throw new Error('User is not a member of this channel');
+    }
+
+    // Verify reply message exists if provided
+    if (args.replyToId) {
+      const replyMessage = await ctx.db.get(args.replyToId);
+      if (!replyMessage || replyMessage.channelId !== args.channelId) {
+        throw new Error('Reply message not found in this channel');
+      }
+    }
+
+    const messageId = await ctx.db.insert('messages', {
+      content: args.content,
+      authorId: args.authorId,
+      channelId: args.channelId,
+      type: args.type ?? 'text',
+      attachments: args.attachments,
+      replyToId: args.replyToId,
+      createdAt: Date.now()
+    });
+
+    // Update channel's last activity
+    await ctx.db.patch(args.channelId, {
+      updatedAt: Date.now()
+    });
+
+    return messageId;
+  }
+});
+
+export const addReaction = mutation({
+  args: {
+    messageId: v.id('messages'),
+    userId: v.id('users'),
+    emoji: v.string()
+  },
+  handler: async (ctx, args) => {
+    const message = await ctx.db.get(args.messageId);
+    if (!message) {
+      throw new Error('Message not found');
+    }
+
+    const reactions = message.reactions ?? [];
+    const existingReaction = reactions.find((r) => r.emoji === args.emoji);
+
+    if (existingReaction) {
+      if (existingReaction.userIds.includes(args.userId)) {
+        // Remove reaction
+        existingReaction.userIds = existingReaction.userIds.filter(
+          (id) => id !== args.userId
+        );
+        existingReaction.count = existingReaction.userIds.length;
+
+        // Remove reaction if no users left
+        if (existingReaction.count === 0) {
+          reactions.splice(reactions.indexOf(existingReaction), 1);
+        }
+      } else {
+        // Add user to existing reaction
+        existingReaction.userIds.push(args.userId);
+        existingReaction.count = existingReaction.userIds.length;
+      }
+    } else {
+      // Create new reaction
+      reactions.push({
+        emoji: args.emoji,
+        userIds: [args.userId],
+        count: 1
+      });
+    }
+
+    return await ctx.db.patch(args.messageId, { reactions });
+  }
+});
+```
+
+## ⚡ Actions for External Integrations
+
+### 1. **External API Actions**
+
+```typescript
+// src/convex/actions.ts
+import { v } from 'convex/values';
+
+import { api } from './_generated/api';
+import { action } from './_generated/server';
+
+export const sendEmailNotification = action({
+  args: {
+    userId: v.id('users'),
+    type: v.string(),
+    subject: v.string(),
+    content: v.string()
+  },
+  handler: async (ctx, args) => {
+    // Get user details
+    const user = await ctx.runQuery(api.users.getUserById, {
+      userId: args.userId
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Send email via external service (Resend)
+    try {
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: 'notifications@yourapp.com',
+          to: [user.email],
+          subject: args.subject,
+          html: args.content
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Email service error: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      // Log the email event
+      await ctx.runMutation(api.events.logEvent, {
+        type: 'email_sent',
+        userId: args.userId,
+        data: {
+          emailType: args.type,
+          emailId: result.id,
+          subject: args.subject
+        }
+      });
+
+      return { success: true, emailId: result.id };
+    } catch (error) {
+      console.error('Failed to send email:', error);
+
+      // Log the failure
+      await ctx.runMutation(api.events.logEvent, {
+        type: 'email_failed',
+        userId: args.userId,
+        data: {
+          emailType: args.type,
+          error: error.message,
+          subject: args.subject
+        }
+      });
+
+      throw new Error('Failed to send email notification');
+    }
+  }
+});
+
+export const generateAIResponse = action({
+  args: {
+    prompt: v.string(),
+    userId: v.id('users'),
+    context: v.optional(v.any())
+  },
+  handler: async (ctx, args) => {
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a helpful assistant.'
+            },
+            {
+              role: 'user',
+              content: args.prompt
+            }
+          ],
+          max_tokens: 500,
+          temperature: 0.7
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`OpenAI API error: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      const aiResponse = result.choices[0]?.message?.content;
+
+      // Log AI usage
+      await ctx.runMutation(api.events.logEvent, {
+        type: 'ai_generated',
+        userId: args.userId,
+        data: {
+          prompt: args.prompt.slice(0, 100), // Store first 100 chars
+          responseLength: aiResponse?.length,
+          model: 'gpt-4o-mini',
+          tokens: result.usage?.total_tokens
+        }
+      });
+
+      return { response: aiResponse, usage: result.usage };
+    } catch (error) {
+      console.error('AI generation failed:', error);
+      throw new Error('Failed to generate AI response');
+    }
+  }
+});
+```
+
+### 2. **File Upload Actions**
+
+```typescript
+// src/convex/files.ts
+import { v } from 'convex/values';
+
+import { action, mutation } from './_generated/server';
+
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.storage.generateUploadUrl();
+  }
+});
+
+export const saveFile = mutation({
+  args: {
+    storageId: v.id('_storage'),
+    name: v.string(),
+    type: v.string(),
+    size: v.number(),
+    uploadedBy: v.id('users'),
+    metadata: v.optional(
+      v.object({
+        width: v.optional(v.number()),
+        height: v.optional(v.number()),
+        duration: v.optional(v.number())
+      })
+    )
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert('files', {
+      ...args,
+      createdAt: Date.now()
+    });
+  }
+});
+
+export const deleteFile = mutation({
+  args: { fileId: v.id('files') },
+  handler: async (ctx, args) => {
+    const file = await ctx.db.get(args.fileId);
+    if (!file) {
+      throw new Error('File not found');
+    }
+
+    // Delete from storage
+    await ctx.storage.delete(file.storageId);
+
+    // Delete from database
+    return await ctx.db.delete(args.fileId);
+  }
+});
+```
+
+## 🔗 Next.js Integration Patterns
+
+### 1. **Provider Setup**
+
+```typescript
+// src/components/providers/convex.tsx
+'use client';
+
+import type { ReactNode } from 'react';
+import { ConvexProvider, ConvexReactClient } from 'convex/react';
+import { env } from '@/env';
+
+const convexClient = new ConvexReactClient(env.NEXT_PUBLIC_CONVEX_URL);
+
+type ConvexClientProviderProps = {
+  children: ReactNode;
+};
+
+export const ConvexClientProvider = ({ children }: ConvexClientProviderProps) => {
+  return (
+    <ConvexProvider client={convexClient}>
+      {children}
+    </ConvexProvider>
+  );
+};
+```
+
+### 2. **React Hooks Usage**
+
+```typescript
+// src/hooks/use-convex-data.ts
+import { useAction, useMutation, useQuery } from 'convex/react';
+
+import { api } from '@/convex/_generated/api';
+import type { Id } from '@/convex/_generated/dataModel';
+
+// Query hooks
+export const useUsers = () => {
+  return useQuery(api.users.getUsers);
+};
+
+export const useUser = (userId: Id<'users'> | undefined) => {
+  return useQuery(api.users.getUserById, userId ? { userId } : 'skip');
+};
+
+export const useChannelMessages = (channelId: Id<'channels'>) => {
+  return useQuery(api.messages.getChannelMessages, { channelId });
+};
+
+export const useUserNotifications = (userId: Id<'users'>) => {
+  return useQuery(api.messages.getUnreadNotifications, { userId });
+};
+
+// Mutation hooks
+export const useCreateUser = () => {
+  return useMutation(api.mutations.createUser);
+};
+
+export const useUpdateUser = () => {
+  return useMutation(api.mutations.updateUser);
+};
+
+export const useSendMessage = () => {
+  return useMutation(api.messages.sendMessage);
+};
+
+export const useAddReaction = () => {
+  return useMutation(api.messages.addReaction);
+};
+
+// Action hooks
+export const useSendEmailNotification = () => {
+  return useAction(api.actions.sendEmailNotification);
+};
+
+export const useGenerateAIResponse = () => {
+  return useAction(api.actions.generateAIResponse);
+};
+```
+
+### 3. **Component Patterns**
+
+```typescript
+// src/components/chat/message-list.tsx
+'use client';
+
+import { useChannelMessages } from '@/hooks/use-convex-data';
+import type { Id } from '@/convex/_generated/dataModel';
+
+type MessageListProps = {
+  channelId: Id<'channels'>;
+};
+
+export const MessageList = ({ channelId }: MessageListProps) => {
+  const messages = useChannelMessages(channelId);
+
+  if (messages === undefined) {
+    return <div>Loading messages...</div>;
+  }
+
+  if (messages.length === 0) {
+    return <div>No messages yet. Start the conversation!</div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {messages.map((message) => (
+        <MessageCard
+          key={message._id}
+          message={message}
+        />
+      ))}
+    </div>
+  );
+};
+
+// src/components/forms/send-message-form.tsx
+'use client';
+
+import { useState } from 'react';
+import { useSendMessage } from '@/hooks/use-convex-data';
+import type { Id } from '@/convex/_generated/dataModel';
+
+type SendMessageFormProps = {
+  channelId: Id<'channels'>;
+  authorId: Id<'users'>;
+};
+
+export const SendMessageForm = ({ channelId, authorId }: SendMessageFormProps) => {
+  const [content, setContent] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const sendMessage = useSendMessage();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!content.trim()) return;
+
+    setIsLoading(true);
+    try {
+      await sendMessage({
+        channelId,
+        authorId,
+        content: content.trim()
+      });
+      setContent('');
+    } catch (error) {
+      console.error('Failed to send message:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="flex gap-2">
+      <input
+        type="text"
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        placeholder="Type a message..."
+        disabled={isLoading}
+        className="flex-1 p-2 border rounded"
+      />
+      <button
+        type="submit"
+        disabled={isLoading || !content.trim()}
+        className="px-4 py-2 bg-blue-500 text-white rounded disabled:opacity-50"
+      >
+        {isLoading ? 'Sending...' : 'Send'}
+      </button>
+    </form>
+  );
+};
+```
+
+## 🔄 Advanced Patterns
+
+### 1. **Optimistic Updates**
+
+```typescript
+// src/hooks/use-optimistic-mutations.ts
+import { useOptimisticMutation } from 'convex/react';
+
+import { api } from '@/convex/_generated/api';
+
+export const useOptimisticSendMessage = () => {
+  return useOptimisticMutation(api.messages.sendMessage, {
+    optimisticUpdate: (localStore, args) => {
+      // Optimistically add the message to local state
+      const existingMessages = localStore.getQuery(api.messages.getChannelMessages, {
+        channelId: args.channelId
+      });
+
+      if (existingMessages) {
+        const optimisticMessage = {
+          _id: crypto.randomUUID() as any, // Temporary ID
+          _creationTime: Date.now(),
+          content: args.content,
+          authorId: args.authorId,
+          channelId: args.channelId,
+          type: args.type ?? 'text',
+          createdAt: Date.now(),
+          author: localStore.getQuery(api.users.getUserById, {
+            userId: args.authorId
+          })
+        };
+
+        localStore.setQuery(
+          api.messages.getChannelMessages,
+          { channelId: args.channelId },
+          [...existingMessages, optimisticMessage]
+        );
+      }
+    }
+  });
+};
+```
+
+### 2. **Error Handling**
+
+```typescript
+// src/convex/utils.ts
+export class ConvexError extends Error {
+  constructor(
+    message: string,
+    public code: string,
+    public data?: any
+  ) {
+    super(message);
+    this.name = 'ConvexError';
+  }
+}
+
+export const handleConvexError = (error: unknown) => {
+  if (error instanceof ConvexError) {
+    return {
+      message: error.message,
+      code: error.code,
+      data: error.data
+    };
+  }
+
+  if (error instanceof Error) {
+    return {
+      message: error.message,
+      code: 'UNKNOWN_ERROR'
+    };
+  }
+
+  return {
+    message: 'An unexpected error occurred',
+    code: 'UNEXPECTED_ERROR'
+  };
+};
+
+// Usage in mutations
+export const safeCreateUser = mutation({
+  args: {
+    /* ... */
+  },
+  handler: async (ctx, args) => {
+    try {
+      // Check business rules
+      const existingUser = await ctx.db
+        .query('users')
+        .withIndex('by_email', (q) => q.eq('email', args.email))
+        .unique();
+
+      if (existingUser) {
+        throw new ConvexError(
+          'A user with this email already exists',
+          'USER_ALREADY_EXISTS',
+          { email: args.email }
+        );
+      }
+
+      // Create user
+      return await ctx.db.insert('users', {
+        // ... user data
+      });
+    } catch (error) {
+      console.error('Error creating user:', error);
+      throw error; // Re-throw to be handled by client
+    }
+  }
+});
+```
+
+### 3. **Scheduled Functions**
+
+```typescript
+// src/convex/crons.ts
+import { cronJobs } from 'convex/server';
+
+import { internal } from './_generated/api';
+// src/convex/maintenance.ts
+import { internalMutation } from './_generated/server';
+
+const crons = cronJobs();
+
+// Daily cleanup of old events
+crons.daily(
+  'cleanup-old-events',
+  { hourUTC: 2, minuteUTC: 0 }, // 2:00 AM UTC
+  internal.maintenance.cleanupOldEvents
+);
+
+// Send weekly digest emails
+crons.weekly(
+  'weekly-digest',
+  { dayOfWeek: 'monday', hourUTC: 9, minuteUTC: 0 },
+  internal.notifications.sendWeeklyDigest
+);
+
+export default crons;
+
+export const cleanupOldEvents = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+
+    const oldEvents = await ctx.db
+      .query('events')
+      .withIndex('by_timestamp', (q) => q.lt('timestamp', thirtyDaysAgo))
+      .collect();
+
+    for (const event of oldEvents) {
+      await ctx.db.delete(event._id);
+    }
+
+    console.log(`Cleaned up ${oldEvents.length} old events`);
+  }
+});
+```
+
+## 📊 Performance & Optimization
+
+### 1. **Query Optimization**
+
+```typescript
+// ✅ Good - Use specific indexes
+export const getRecentMessages = query({
+  args: { channelId: v.id('channels') },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query('messages')
+      .withIndex('by_channel_created_at', (q) => q.eq('channelId', args.channelId))
+      .order('desc')
+      .take(50);
+  }
+});
+
+// ❌ Avoid - Scanning entire table
+export const getRecentMessagesBad = query({
+  args: { channelId: v.id('channels') },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query('messages')
+      .filter((q) => q.eq(q.field('channelId'), args.channelId))
+      .order('desc')
+      .take(50);
+  }
+});
+```
+
+### 2. **Batch Operations**
+
+```typescript
+// ✅ Good - Batch related operations
+export const createChannelWithMembers = mutation({
+  args: {
+    name: v.string(),
+    ownerId: v.id('users'),
+    memberIds: v.array(v.id('users'))
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+
+    // Create channel
+    const channelId = await ctx.db.insert('channels', {
+      name: args.name,
+      type: 'private',
+      ownerId: args.ownerId,
+      memberIds: [args.ownerId, ...args.memberIds],
+      settings: { allowFiles: true },
+      createdAt: now,
+      updatedAt: now
+    });
+
+    // Create welcome message
+    await ctx.db.insert('messages', {
+      content: `Welcome to ${args.name}!`,
+      authorId: args.ownerId,
+      channelId,
+      type: 'text',
+      createdAt: now
+    });
+
+    // Notify all members
+    const notifications = args.memberIds.map((userId) => ({
+      userId,
+      type: 'channel_added',
+      title: 'Added to Channel',
+      message: `You've been added to ${args.name}`,
+      data: { channelId },
+      read: false,
+      createdAt: now
+    }));
+
+    await Promise.all(
+      notifications.map((notification) => ctx.db.insert('notifications', notification))
+    );
+
+    return channelId;
+  }
+});
+```
+
+## 🧪 Testing Convex Functions
+
+### 1. **Unit Testing**
+
+```typescript
+// src/convex/testing/setup.ts
+import { convexTest } from 'convex-test';
+import { describe, expect, it } from 'vitest';
+
+import { api } from '../_generated/api';
+import schema from '../schema';
+
+describe('user functions', () => {
+  it('should create and retrieve a user', async () => {
+    const t = convexTest(schema);
+
+    // Create a user
+    const userId = await t.mutation(api.mutations.createUser, {
+      name: 'John Doe',
+      email: 'john@example.com',
+      role: 'user',
+      preferences: {
+        theme: 'dark',
+        notifications: true,
+        language: 'en'
+      }
+    });
+
+    // Retrieve the user
+    const user = await t.query(api.users.getUserById, { userId });
+
+    expect(user).toBeDefined();
+    expect(user?.name).toBe('John Doe');
+    expect(user?.email).toBe('john@example.com');
+  });
+
+  it('should prevent duplicate email addresses', async () => {
+    const t = convexTest(schema);
+
+    // Create first user
+    await t.mutation(api.mutations.createUser, {
+      name: 'John Doe',
+      email: 'john@example.com'
+    });
+
+    // Try to create second user with same email
+    await expect(
+      t.mutation(api.mutations.createUser, {
+        name: 'Jane Doe',
+        email: 'john@example.com'
+      })
+    ).rejects.toThrow('User with this email already exists');
+  });
+});
+```
+
+## 📋 Best Practices Summary
+
+### ✅ **Schema Design**
+
+- [ ] Use descriptive table and field names
+- [ ] Add proper indexes for query patterns
+- [ ] Define relationships with foreign keys
+- [ ] Use unions for controlled vocabulary
+- [ ] Include timestamps for auditing
+
+### ✅ **Query Optimization**
+
+- [ ] Use specific indexes in queries
+- [ ] Implement pagination for large datasets
+- [ ] Batch related operations
+- [ ] Cache expensive computations
+- [ ] Use early returns for performance
+
+### ✅ **Real-Time Features**
+
+- [ ] Design for live updates by default
+- [ ] Implement optimistic updates
+- [ ] Handle connection state properly
+- [ ] Use appropriate query granularity
+- [ ] Manage subscription lifecycles
+
+### ✅ **Error Handling**
+
+- [ ] Define custom error types
+- [ ] Provide meaningful error messages
+- [ ] Log errors for debugging
+- [ ] Handle edge cases gracefully
+- [ ] Implement retry strategies
+
+### ✅ **Security & Validation**
+
+- [ ] Validate all input parameters
+- [ ] Implement proper authorization
+- [ ] Sanitize user-generated content
+- [ ] Use TypeScript for type safety
+- [ ] Audit sensitive operations
+
+This comprehensive guide ensures optimal real-time performance, scalability, and
+maintainability using Convex in your Next.js application. alwaysApply: false
+
+---

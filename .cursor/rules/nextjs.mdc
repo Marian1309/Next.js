@@ -1,0 +1,879 @@
+---
+alwaysApply: false
+---
+
+# Next.js 15 Rules & Best Practices
+
+## 🎯 Core Principles
+
+### 1. **Server-First Architecture**
+
+- Default to Server Components for optimal performance
+- Use `'use client'` directive only when browser APIs are needed
+- Minimize client-side JavaScript bundles
+- Leverage static rendering where possible
+
+### 2. **App Router Structure**
+
+- Use file-based routing with the `app` directory
+- Organize routes with route groups `(root)`, `(auth)` for logical grouping
+- Implement proper error boundaries and loading states
+- Use dynamic routes with `[param]` syntax
+
+### 3. **Performance by Default**
+
+- Optimize images with `next/image`
+- Implement proper font loading strategies
+- Use bundle analysis for optimization
+- Leverage caching strategies
+
+## 🏗️ App Router Structure
+
+### 1. **File Convention**
+
+```
+app/
+├── layout.tsx          # Root layout (Server Component)
+├── page.tsx            # Root page (Server Component)
+├── loading.tsx         # Loading UI
+├── not-found.tsx       # 404 page
+├── error.tsx           # Error boundary
+├── globals.css         # Global styles
+├── (root)/             # Route group
+│   ├── page.tsx        # /page
+│   └── profile/        # /profile
+├── auth/               # /auth
+│   ├── layout.tsx      # Auth layout
+│   └── [pathname]/     # Dynamic auth routes
+├── api/                # API routes
+│   └── auth/
+│       └── [...all]/
+│           └── route.ts
+└── providers.tsx       # Client providers
+```
+
+### 2. **Route Organization**
+
+```typescript
+// ✅ Good - Route groups for organization
+app/
+├── (dashboard)/
+│   ├── dashboard/
+│   ├── settings/
+│   └── profile/
+├── (auth)/
+│   ├── login/
+│   └── register/
+└── (marketing)/
+    ├── about/
+    └── contact/
+
+// ❌ Bad - No logical grouping
+app/
+├── dashboard/
+├── settings/
+├── profile/
+├── login/
+├── register/
+├── about/
+└── contact/
+```
+
+## 🔧 Server Components & Client Components
+
+### 1. **Server Components (Default)**
+
+Use Server Components for:
+
+- Data fetching from databases
+- Accessing backend resources
+- Keeping sensitive information secure
+- Reducing client-side JavaScript
+
+```typescript
+// ✅ Good - Server Component
+const HomePage = async () => {
+  const session = await getSession();
+
+  return <SignOut session={session} />;
+};
+
+export default HomePage;
+```
+
+### 2. **Client Components**
+
+Use Client Components for:
+
+- Event handlers and interactivity
+- Browser APIs (localStorage, navigator)
+- State management (useState, useEffect)
+- Third-party libraries requiring browser environment
+
+```typescript
+// ✅ Good - Client Component
+'use client';
+
+import { useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+
+const SignOut = ({ session }: Properties) => {
+  const router = useRouter();
+
+  const handleSignOut = useCallback(async () => {
+    await signOut();
+    router.push('/auth/sign-in');
+  }, [router]);
+
+  return <Button onClick={handleSignOut}>Sign out</Button>;
+};
+```
+
+### 3. **Component Boundaries**
+
+```typescript
+// ✅ Good - Server Component fetches data, Client Component handles interaction
+// Server Component
+const UserProfile = async ({ userId }: { userId: string }) => {
+  const user = await getUserById(userId);
+
+  return <UserProfileForm user={user} />;
+};
+
+// Client Component
+'use client';
+const UserProfileForm = ({ user }: { user: User }) => {
+  const [isEditing, setIsEditing] = useState(false);
+
+  return (
+    <div>
+      {isEditing ? <EditForm user={user} /> : <DisplayProfile user={user} />}
+      <Button onClick={() => setIsEditing(!isEditing)}>
+        {isEditing ? 'Cancel' : 'Edit'}
+      </Button>
+    </div>
+  );
+};
+```
+
+## 🚀 Server Actions
+
+### 1. **Server Action Structure**
+
+```typescript
+// ✅ Good - Server Action with proper error handling
+'use server';
+
+import { headers } from 'next/headers';
+
+import { isFailure, tryCatch } from '@pidchashyi/try-catch';
+
+// ✅ Good - Server Action with proper error handling
+
+// ✅ Good - Server Action with proper error handling
+
+// ✅ Good - Server Action with proper error handling
+
+export const signUpByEmail = async (params: {
+  name: string;
+  email: string;
+  password: string;
+}) => {
+  const user = await tryCatch(
+    auth.api.signUpEmail({
+      body: params
+    })
+  );
+
+  if (isFailure(user)) {
+    return {
+      success: false,
+      message: user.error?.message ?? 'Something went wrong'
+    };
+  }
+
+  return {
+    success: true,
+    message: 'User signed up successfully'
+  };
+};
+```
+
+### 2. **Server Action Usage**
+
+```typescript
+// ✅ Good - Using Server Actions in Client Components
+'use client';
+
+import { signOut } from '@/actions/auth';
+
+const SignOutButton = () => {
+  const handleSignOut = async () => {
+    await toast.promise(signOut(), {
+      loading: 'Signing out...',
+      success: 'Signed out successfully',
+      error: 'Failed to sign out'
+    });
+  };
+
+  return <Button onClick={handleSignOut}>Sign out</Button>;
+};
+```
+
+### 3. **Server Action Patterns**
+
+- Always use `'use server'` directive
+- Return consistent response objects
+- Handle errors properly with try-catch
+- Use type-safe parameter objects
+- Access headers and cookies server-side
+
+## 🌐 API Routes
+
+### 1. **API Route Structure**
+
+```typescript
+// ✅ Good - API Route with proper HTTP methods
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function GET(request: NextRequest) {
+  try {
+    const data = await fetchData();
+    return NextResponse.json({ data });
+  } catch (error) {
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const result = await createData(body);
+    return NextResponse.json(result);
+  } catch (error) {
+    return NextResponse.json({ error: 'Bad Request' }, { status: 400 });
+  }
+}
+```
+
+### 2. **Dynamic API Routes**
+
+```typescript
+// app/api/users/[id]/route.ts
+interface Context {
+  params: Promise<{ id: string }>;
+}
+
+export async function GET(request: NextRequest, context: Context) {
+  const { id } = await context.params;
+  const user = await getUserById(id);
+
+  return NextResponse.json({ user });
+}
+```
+
+## 🔐 Middleware
+
+### 1. **Middleware Structure**
+
+```typescript
+// ✅ Good - Middleware with proper routing
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
+
+export const middleware = async (request: NextRequest) => {
+  const session = await getSession(request);
+
+  // Redirect authenticated users away from auth pages
+  if (session?.data) {
+    return NextResponse.redirect(new URL('/', request.url));
+  }
+
+  return NextResponse.next();
+};
+
+// Configure middleware matcher
+export const config = {
+  matcher: [
+    '/auth/sign-in',
+    '/auth/sign-up',
+    '/auth/magic-link',
+    '/auth/forgot-password',
+    '/auth/two-factor',
+    '/auth/recover-account',
+    '/auth/reset-password',
+    '/auth/sign-out',
+    '/auth/settings',
+    '/auth/callback'
+  ]
+};
+```
+
+### 2. **Middleware Patterns**
+
+- Use specific matchers for targeted routes
+- Keep middleware logic lightweight
+- Return appropriate responses (redirect, rewrite, next)
+- Access request headers and cookies
+- Implement proper error handling
+
+## 📱 Layout & Metadata
+
+### 1. **Root Layout**
+
+```typescript
+// ✅ Good - Root Layout with metadata and font optimization
+import type { ReactNode } from 'react';
+import type { Metadata } from 'next';
+import { Roboto } from 'next/font/google';
+
+export const metadata: Metadata = {
+  title: 'Next.js 15',
+  description: 'Next.js 15 Starter KIT',
+  metadataBase: new URL(env.NEXT_PUBLIC_BASE_URL),
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true }
+  }
+};
+
+const roboto = Roboto({
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  display: 'swap',
+  variable: '--font-roboto'
+});
+
+const RootLayout = ({ children }: { children: ReactNode }) => {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <link href="https://lh3.googleusercontent.com" rel="preconnect" />
+      </head>
+      <body className={roboto.variable}>
+        <Providers>
+          <Header />
+          <main className="flex-1">{children}</main>
+          <Footer />
+        </Providers>
+      </body>
+    </html>
+  );
+};
+```
+
+### 2. **Dynamic Metadata**
+
+```typescript
+// ✅ Good - Dynamic metadata generation
+import type { Metadata } from 'next';
+
+interface Props {
+  params: Promise<{ slug: string }>;
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const post = await getPost(slug);
+
+  return {
+    title: post.title,
+    description: post.excerpt,
+    openGraph: {
+      title: post.title,
+      description: post.excerpt,
+      images: [post.image]
+    }
+  };
+}
+```
+
+## 🎨 Styling & CSS
+
+### 1. **Global CSS Organization**
+
+```css
+/* ✅ Good - Global CSS with Tailwind and custom properties */
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  /* Custom breakpoints */
+  --breakpoint-nano: 320px;
+  --breakpoint-xs: 480px;
+
+  /* Custom fonts */
+  --font-inter: var(--font-inter);
+  --font-roboto: var(--font-roboto);
+
+  /* Custom colors */
+  --color-smooth-black: oklch(29.08% 0.022 279.21);
+  --color-royal-purple: oklch(63.56% 0.222 279.21);
+}
+
+:root {
+  --radius: 0.65rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.141 0.005 285.823);
+}
+
+.dark {
+  --background: oklch(0.141 0.005 285.823);
+  --foreground: oklch(0.985 0 0);
+}
+```
+
+### 2. **Component Styling**
+
+```typescript
+// ✅ Good - Component with Tailwind classes
+const Button = ({ variant, size, className, ...props }: ButtonProps) => {
+  return (
+    <button
+      className={cn(
+        "inline-flex items-center justify-center gap-2 whitespace-nowrap",
+        "rounded-md text-sm font-medium transition-all",
+        "disabled:pointer-events-none disabled:opacity-50",
+        buttonVariants({ variant, size }),
+        className
+      )}
+      {...props}
+    />
+  );
+};
+```
+
+## 🖼️ Image Optimization
+
+### 1. **Next.js Image Component**
+
+```typescript
+// ✅ Good - Optimized image with proper attributes
+import Image from 'next/image';
+
+const UserAvatar = ({ user }: { user: User }) => {
+  return (
+    <Image
+      src={user.image}
+      alt={`${user.name}'s avatar`}
+      width={100}
+      height={100}
+      className="rounded-full"
+      priority // For above-the-fold images
+    />
+  );
+};
+```
+
+### 2. **Image Configuration**
+
+```typescript
+// next.config.ts
+const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'example.com',
+        port: '',
+        pathname: '/images/**'
+      }
+    ],
+    formats: ['image/webp', 'image/avif']
+  }
+};
+```
+
+## 🔤 Font Optimization
+
+### 1. **Google Fonts**
+
+```typescript
+// ✅ Good - Optimized font loading
+import { Inter, Roboto } from 'next/font/google';
+
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter'
+});
+
+const roboto = Roboto({
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  display: 'swap',
+  variable: '--font-roboto'
+});
+```
+
+### 2. **Custom Fonts**
+
+```typescript
+// ✅ Good - Custom font with local files
+import localFont from 'next/font/local';
+
+const myFont = localFont({
+  src: './my-font.woff2',
+  display: 'swap',
+  variable: '--font-my-font'
+});
+```
+
+## 🚦 Error Handling
+
+### 1. **Error Pages**
+
+```typescript
+// ✅ Good - Custom error page
+import { ErrorLayout } from '@/components/layout';
+
+const NotFoundPage = () => {
+  return (
+    <ErrorLayout
+      title="Page Not Found"
+      description="The page you're looking for doesn't exist."
+    />
+  );
+};
+
+export default NotFoundPage;
+```
+
+### 2. **Error Boundaries**
+
+```typescript
+// ✅ Good - Error boundary with recovery
+'use client';
+
+import { useEffect } from 'react';
+
+interface ErrorProps {
+  error: Error & { digest?: string };
+  reset: () => void;
+}
+
+const Error = ({ error, reset }: ErrorProps) => {
+  useEffect(() => {
+    console.error(error);
+  }, [error]);
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[400px]">
+      <h2>Something went wrong!</h2>
+      <button onClick={reset}>Try again</button>
+    </div>
+  );
+};
+
+export default Error;
+```
+
+## ⚡ Performance Optimization
+
+### 1. **Bundle Analysis**
+
+```typescript
+// next.config.ts
+import bundleAnalyzer from '@next/bundle-analyzer';
+
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === 'true'
+});
+
+export default withBundleAnalyzer(nextConfig);
+```
+
+### 2. **Dynamic Imports**
+
+```typescript
+// ✅ Good - Dynamic imports for code splitting
+import dynamic from 'next/dynamic';
+
+const DynamicComponent = dynamic(() => import('./HeavyComponent'), {
+  loading: () => <div>Loading...</div>,
+  ssr: false
+});
+```
+
+### 3. **Loading States**
+
+```typescript
+// ✅ Good - Loading UI
+const Loading = () => {
+  return (
+    <div className="flex min-h-dvh flex-1 items-center justify-center">
+      <LoadingSpinner />
+    </div>
+  );
+};
+
+export default Loading;
+```
+
+## 🔄 Data Fetching
+
+### 1. **Server Components Data Fetching**
+
+```typescript
+// ✅ Good - Data fetching in Server Components
+const UserProfile = async ({ userId }: { userId: string }) => {
+  const user = await getUserById(userId);
+
+  if (!user) {
+    notFound();
+  }
+
+  return <UserCard user={user} />;
+};
+```
+
+### 2. **Static Generation**
+
+```typescript
+// ✅ Good - Static generation with dynamic params
+export const generateStaticParams = async () => {
+  const users = await getUsers();
+
+  return users.map((user) => ({
+    id: user.id
+  }));
+};
+```
+
+### 3. **Revalidation**
+
+```typescript
+// ✅ Good - Revalidation strategies
+export const revalidate = 3600; // Revalidate every hour
+
+// Or use tags for on-demand revalidation
+export default async function Page() {
+  const data = await fetch('https://api.example.com/data', {
+    next: { tags: ['data'] }
+  });
+
+  return <div>{/* render data */}</div>;
+}
+```
+
+## 📊 Configuration Best Practices
+
+### 1. **Next.js Config**
+
+```typescript
+// ✅ Good - Production-ready config
+import type { NextConfig } from 'next';
+
+const nextConfig: NextConfig = {
+  reactStrictMode: true,
+  swcMinify: true,
+  images: {
+    formats: ['image/webp', 'image/avif'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'example.com'
+      }
+    ]
+  },
+  experimental: {
+    typedRoutes: true,
+    serverActions: {
+      bodySizeLimit: '2mb'
+    }
+  },
+  eslint: {
+    ignoreDuringBuilds: false
+  },
+  typescript: {
+    ignoreBuildErrors: false
+  }
+};
+
+export default nextConfig;
+```
+
+### 2. **Environment Variables**
+
+```typescript
+// ✅ Good - Type-safe environment variables
+import { createEnv } from '@t3-oss/env-nextjs';
+import { z } from 'zod';
+
+export const env = createEnv({
+  server: {
+    DATABASE_URL: z.string().url(),
+    NEXTAUTH_SECRET: z.string()
+  },
+  client: {
+    NEXT_PUBLIC_APP_URL: z.string().url()
+  },
+  runtimeEnv: {
+    DATABASE_URL: process.env.DATABASE_URL,
+    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL
+  }
+});
+```
+
+## 🧭 Routing Patterns
+
+### 1. **Dynamic Routes**
+
+```typescript
+// ✅ Good - Dynamic routing with type safety
+interface PageProps {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+const PostPage = async ({ params, searchParams }: PageProps) => {
+  const { slug } = await params;
+  const search = await searchParams;
+
+  const post = await getPost(slug);
+
+  return <Article post={post} />;
+};
+```
+
+### 2. **Parallel Routes**
+
+```typescript
+// ✅ Good - Parallel routes for complex layouts
+// app/dashboard/@analytics/page.tsx
+// app/dashboard/@team/page.tsx
+// app/dashboard/layout.tsx
+
+export default function DashboardLayout({
+  children,
+  analytics,
+  team
+}: {
+  children: React.ReactNode;
+  analytics: React.ReactNode;
+  team: React.ReactNode;
+}) {
+  return (
+    <div>
+      {children}
+      {analytics}
+      {team}
+    </div>
+  );
+}
+```
+
+## 🔒 Security Best Practices
+
+### 1. **Headers Configuration**
+
+```typescript
+// next.config.ts
+const nextConfig: NextConfig = {
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY'
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff'
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'origin-when-cross-origin'
+          }
+        ]
+      }
+    ];
+  }
+};
+```
+
+### 2. **Server Action Security**
+
+```typescript
+// ✅ Good - Server action with validation
+'use server';
+
+import { redirect } from 'next/navigation';
+
+import { z } from 'zod';
+
+// ✅ Good - Server action with validation
+
+// ✅ Good - Server action with validation
+
+// ✅ Good - Server action with validation
+
+const schema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8)
+});
+
+export async function authenticate(formData: FormData) {
+  const validatedFields = schema.safeParse({
+    email: formData.get('email'),
+    password: formData.get('password')
+  });
+
+  if (!validatedFields.success) {
+    return { error: 'Invalid fields' };
+  }
+
+  // Authenticate user
+  const result = await signIn(validatedFields.data);
+
+  if (result.success) {
+    redirect('/dashboard');
+  }
+
+  return { error: 'Authentication failed' };
+}
+```
+
+## 📦 Development Workflow
+
+### 1. **Scripts Organization**
+
+```json
+{
+  "scripts": {
+    "dev": "next dev --turbo",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit",
+    "analyze": "ANALYZE=true next build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
+  }
+}
+```
+
+### 2. **Build Optimization**
+
+```typescript
+// ✅ Good - Build optimization
+const nextConfig: NextConfig = {
+  experimental: {
+    optimizeCss: true,
+    gzipSize: true
+  },
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production'
+  }
+};
+```
+
+This comprehensive Next.js 15 guide ensures optimal performance, maintainability, and
+developer experience using modern React patterns and Next.js features.

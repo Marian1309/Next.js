@@ -1,0 +1,37 @@
+# dependencies
+node_modules
+
+# Ignore files for PNPM, NPM, YARN and BUN
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+bun.lock
+
+# next.js
+.next
+
+# production
+build
+
+# local env files
+.env
+.env.local
+
+# vercel
+.vercel
+
+# typescript
+next-env.d.ts
+
+# commit validation
+.husky/_
+
+# fumadocs
+.source
+
+# opennextjs
+.open-next
+
+# playwright
+playwright-report
+test-results

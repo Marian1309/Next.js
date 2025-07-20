@@ -1,0 +1,49 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "src/app/**/*.{ts,tsx}",
+    "src/pages/**/*.{ts,tsx}",
+    "src/components/**/*.{ts,tsx}",
+    "src/lib/**/*.{ts,tsx}",
+    "src/hooks/**/*.{ts,tsx}",
+    "src/actions/**/*.{ts,tsx}",
+    "src/middleware.ts",
+    "next.config.ts",
+    "tailwind.config.ts"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx}",
+    "!src/**/*.test.{ts,tsx}",
+    "!src/**/*.spec.{ts,tsx}",
+    "!**/__tests__/**",
+    "!**/test/**"
+  ],
+  "ignore": ["src/convex/_generated/**", "src/docs/**", ".next/**", "node_modules/**"],
+  "ignoreDependencies": [
+    "@types/*",
+    "typescript",
+    "eslint",
+    "prettier",
+    "@next/bundle-analyzer",
+    "cross-env",
+    "rimraf"
+  ],
+  "includeEntryExports": true,
+  "exclude": ["duplicates", "classMembers", "types", "nsTypes", "nsExports"],
+  "next": {
+    "entry": [
+      "next.config.ts",
+      "src/app/layout.tsx",
+      "src/app/page.tsx",
+      "src/middleware.ts"
+    ]
+  },
+  "playwright": {
+    "config": ["playwright.config.ts"],
+    "entry": ["__tests__/e2n/**/*.test.ts"]
+  },
+  "vitest": {
+    "config": ["vitest.config.mts"],
+    "entry": ["__tests__/unit/**/*.test.ts"]
+  }
+}

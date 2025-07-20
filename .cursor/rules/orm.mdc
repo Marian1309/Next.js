@@ -1,0 +1,1173 @@
+# Drizzle ORM Rules & Best Practices
+
+## 🎯 Core Principles
+
+### 1. **Type-Safe Database Operations**
+
+- Always use TypeScript with strict mode for schema definitions
+- Leverage Drizzle's type inference for select and insert operations
+- Use proper column types that match PostgreSQL data types
+- Define explicit relationships with foreign key constraints
+
+### 2. **Performance-First Approach**
+
+- Use connection pooling for optimal resource management
+- Implement proper indexing strategies in schema definitions
+- Leverage prepared statements for frequently executed queries
+- Use batch operations for bulk data manipulation
+
+### 3. **Security & Data Integrity**
+
+- Always validate data with Zod before database operations
+- Use transactions for multi-table operations
+- Implement proper foreign key constraints and cascades
+- Use enum types for controlled vocabulary fields
+
+## 🏗️ Database Configuration & Setup
+
+### 1. **Connection Configuration**
+
+```typescript
+// src/database/index.ts
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
+
+import { env } from '@/env';
+
+// Optimized connection pool configuration
+const CONNECTION_CONFIG = {
+  prepare: false, // Disable prepared statements for flexibility
+  max: 20, // Connection pool size
+  idle_timeout: 20, // Idle timeout in seconds
+  max_lifetime: 60 * 30, // Connection lifetime (30 minutes)
+  connect_timeout: 10, // Connection timeout
+  transform: {
+    undefined: null // Transform undefined to null
+  }
+} as const;
+
+let _db: ReturnType<typeof createDatabaseConnection> | null = null;
+
+const createDatabaseConnection = () => {
+  const queryClient = postgres(env.DATABASE_URL!, CONNECTION_CONFIG);
+
+  return drizzle(queryClient, {
+    schema: {
+      ...authSchema,
+      ...applicationSchema
+    },
+    logger: env.NODE_ENV === 'development'
+  });
+};
+
+// Singleton pattern for connection management
+export const database = (() => {
+  if (!_db) {
+    _db = createDatabaseConnection();
+  }
+  return _db;
+})();
+```
+
+### 2. **Drizzle Kit Configuration**
+
+```typescript
+// drizzle.config.ts
+import { defineConfig } from 'drizzle-kit';
+
+export default defineConfig({
+  out: './src/database/migrations',
+  schema: ['./src/database/auth-schema.ts', './src/database/schema.ts'],
+  dialect: 'postgresql',
+  dbCredentials: {
+    url: process.env.DATABASE_URL!
+  },
+  verbose: true,
+  strict: true,
+  migrations: {
+    prefix: 'supabase'
+  }
+});
+```
+
+## 📋 Schema Definition Patterns
+
+### 1. **Table Schema Structure**
+
+```typescript
+// ✅ Good - Comprehensive table definition
+import { boolean, integer, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+
+export enum UserRole {
+  ADMIN = 'admin',
+  USER = 'user',
+  MODERATOR = 'moderator'
+}
+
+export enum PostStatus {
+  DRAFT = 'draft',
+  PUBLISHED = 'published',
+  ARCHIVED = 'archived'
+}
+
+export const user = pgTable('user', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  email: text('email').notNull().unique(),
+  emailVerified: boolean('email_verified')
+    .$defaultFn(() => false)
+    .notNull(),
+  image: text('image'),
+  role: text('role').$type<UserRole>().default(UserRole.USER).notNull(),
+  createdAt: timestamp('created_at')
+    .$defaultFn(() => new Date())
+    .notNull(),
+  updatedAt: timestamp('updated_at')
+    .$defaultFn(() => new Date())
+    .notNull(),
+  // Soft delete pattern
+  deletedAt: timestamp('deleted_at')
+});
+
+export const post = pgTable('post', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  title: text('title').notNull(),
+  content: text('content').notNull(),
+  status: text('status').$type<PostStatus>().default(PostStatus.DRAFT).notNull(),
+  authorId: uuid('author_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at')
+    .$defaultFn(() => new Date())
+    .notNull(),
+  updatedAt: timestamp('updated_at')
+    .$defaultFn(() => new Date())
+    .notNull(),
+  publishedAt: timestamp('published_at')
+});
+```
+
+### 2. **Relationship Patterns**
+
+```typescript
+// ✅ Good - One-to-many relationship
+export const category = pgTable('category', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull().unique(),
+  slug: text('slug').notNull().unique(),
+  description: text('description'),
+  createdAt: timestamp('created_at')
+    .$defaultFn(() => new Date())
+    .notNull()
+});
+
+export const postCategory = pgTable('post_category', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  postId: uuid('post_id')
+    .notNull()
+    .references(() => post.id, { onDelete: 'cascade' }),
+  categoryId: uuid('category_id')
+    .notNull()
+    .references(() => category.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at')
+    .$defaultFn(() => new Date())
+    .notNull()
+});
+
+// Many-to-many with additional fields
+export const userFollow = pgTable('user_follow', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  followerId: uuid('follower_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  followingId: uuid('following_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at')
+    .$defaultFn(() => new Date())
+    .notNull(),
+  notificationsEnabled: boolean('notifications_enabled').default(true).notNull()
+});
+```
+
+### 3. **Index Definitions**
+
+```typescript
+// ✅ Good - Performance optimized indexes
+import { index, uniqueIndex } from 'drizzle-orm/pg-core';
+
+export const userEmailIndex = uniqueIndex('user_email_idx').on(user.email);
+export const userRoleIndex = index('user_role_idx').on(user.role);
+export const userCreatedAtIndex = index('user_created_at_idx').on(user.createdAt);
+
+export const postAuthorIndex = index('post_author_idx').on(post.authorId);
+export const postStatusIndex = index('post_status_idx').on(post.status);
+export const postPublishedIndex = index('post_published_idx')
+  .on(post.publishedAt)
+  .where(sql`${post.status} = 'published'`);
+
+// Composite indexes for common query patterns
+export const postAuthorStatusIndex = index('post_author_status_idx').on(
+  post.authorId,
+  post.status
+);
+```
+
+## 🔧 Type Definitions & Inference
+
+### 1. **Schema Type Inference**
+
+```typescript
+// ✅ Good - Type inference patterns
+import type { InferInsertModel, InferSelectModel } from 'drizzle-orm';
+
+// Select types (what comes from database)
+export type User = InferSelectModel<typeof user>;
+export type Post = InferSelectModel<typeof post>;
+export type Category = InferSelectModel<typeof category>;
+
+// Insert types (what goes into database)
+export type NewUser = InferInsertModel<typeof user>;
+export type NewPost = InferInsertModel<typeof post>;
+export type NewCategory = InferInsertModel<typeof category>;
+
+// Partial update types
+export type UserUpdate = Partial<Omit<NewUser, 'id' | 'createdAt'>>;
+export type PostUpdate = Partial<Omit<NewPost, 'id' | 'createdAt' | 'authorId'>>;
+
+// Custom composite types
+export type UserWithPosts = User & {
+  posts: Post[];
+};
+
+export type PostWithAuthor = Post & {
+  author: User;
+  categories: Category[];
+};
+
+export type UserProfile = Pick<User, 'id' | 'name' | 'email' | 'image' | 'role'>;
+```
+
+### 2. **Utility Types**
+
+```typescript
+// ✅ Good - Database utility types
+export type DatabaseError = {
+  code: string;
+  message: string;
+  details?: unknown;
+};
+
+export type QueryResult<T> =
+  | {
+      data: T;
+      success: true;
+    }
+  | {
+      error: DatabaseError;
+      success: false;
+    };
+
+export type PaginationOptions = {
+  page: number;
+  limit: number;
+  orderBy?: string;
+  orderDirection?: 'asc' | 'desc';
+};
+
+export type PaginatedResult<T> = {
+  data: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+};
+```
+
+## 🔍 Query Patterns & Best Practices
+
+### 1. **Basic CRUD Operations**
+
+```typescript
+// ✅ Good - Type-safe CRUD operations
+import { and, asc, count, desc, eq, sql } from 'drizzle-orm';
+
+import { database } from '@/database';
+import { post, user } from '@/database/schema';
+
+// CREATE
+export const createUser = async (userData: NewUser): Promise<QueryResult<User>> => {
+  try {
+    const [newUser] = await database.insert(user).values(userData).returning();
+
+    return { data: newUser, success: true };
+  } catch (error) {
+    return {
+      error: {
+        code: 'CREATE_USER_ERROR',
+        message: 'Failed to create user',
+        details: error
+      },
+      success: false
+    };
+  }
+};
+
+// READ
+export const getUserById = async (userId: string): Promise<User | null> => {
+  const [foundUser] = await database
+    .select()
+    .from(user)
+    .where(eq(user.id, userId))
+    .limit(1);
+
+  return foundUser || null;
+};
+
+export const getUserByEmail = async (email: string): Promise<User | null> => {
+  const [foundUser] = await database
+    .select()
+    .from(user)
+    .where(eq(user.email, email))
+    .limit(1);
+
+  return foundUser || null;
+};
+
+// UPDATE
+export const updateUser = async (
+  userId: string,
+  updates: UserUpdate
+): Promise<QueryResult<User>> => {
+  try {
+    const [updatedUser] = await database
+      .update(user)
+      .set({
+        ...updates,
+        updatedAt: new Date()
+      })
+      .where(eq(user.id, userId))
+      .returning();
+
+    if (!updatedUser) {
+      return {
+        error: {
+          code: 'USER_NOT_FOUND',
+          message: 'User not found'
+        },
+        success: false
+      };
+    }
+
+    return { data: updatedUser, success: true };
+  } catch (error) {
+    return {
+      error: {
+        code: 'UPDATE_USER_ERROR',
+        message: 'Failed to update user',
+        details: error
+      },
+      success: false
+    };
+  }
+};
+
+// DELETE (soft delete)
+export const softDeleteUser = async (userId: string): Promise<QueryResult<User>> => {
+  try {
+    const [deletedUser] = await database
+      .update(user)
+      .set({ deletedAt: new Date() })
+      .where(and(eq(user.id, userId), sql`${user.deletedAt} IS NULL`))
+      .returning();
+
+    if (!deletedUser) {
+      return {
+        error: {
+          code: 'USER_NOT_FOUND',
+          message: 'User not found or already deleted'
+        },
+        success: false
+      };
+    }
+
+    return { data: deletedUser, success: true };
+  } catch (error) {
+    return {
+      error: {
+        code: 'DELETE_USER_ERROR',
+        message: 'Failed to delete user',
+        details: error
+      },
+      success: false
+    };
+  }
+};
+```
+
+### 2. **Advanced Query Patterns**
+
+```typescript
+// ✅ Good - Complex queries with joins and aggregations
+import {
+  and,
+  asc,
+  avg,
+  between,
+  count,
+  desc,
+  eq,
+  ilike,
+  inArray,
+  isNotNull,
+  isNull,
+  like,
+  max,
+  min,
+  not,
+  or,
+  sum
+} from 'drizzle-orm';
+
+// Pagination with filtering
+export const getUsersWithPagination = async (
+  options: PaginationOptions & {
+    search?: string;
+    role?: UserRole;
+    isActive?: boolean;
+  }
+): Promise<PaginatedResult<User>> => {
+  const {
+    page,
+    limit,
+    search,
+    role,
+    isActive,
+    orderBy = 'createdAt',
+    orderDirection = 'desc'
+  } = options;
+
+  // Build dynamic where conditions
+  const conditions = and(
+    isNull(user.deletedAt), // Only active users
+    search ? ilike(user.name, `%${search}%`) : undefined,
+    role ? eq(user.role, role) : undefined,
+    isActive !== undefined ? eq(user.emailVerified, isActive) : undefined
+  );
+
+  // Get total count
+  const [{ totalCount }] = await database
+    .select({ totalCount: count() })
+    .from(user)
+    .where(conditions);
+
+  // Get paginated data
+  const users = await database
+    .select()
+    .from(user)
+    .where(conditions)
+    .orderBy(
+      orderDirection === 'desc'
+        ? desc(user[orderBy as keyof typeof user])
+        : asc(user[orderBy as keyof typeof user])
+    )
+    .limit(limit)
+    .offset((page - 1) * limit);
+
+  return {
+    data: users,
+    pagination: {
+      page,
+      limit,
+      total: totalCount,
+      pages: Math.ceil(totalCount / limit),
+      hasNext: page * limit < totalCount,
+      hasPrev: page > 1
+    }
+  };
+};
+
+// Complex joins with relations
+export const getPostsWithAuthorsAndCategories = async (
+  filters: {
+    authorId?: string;
+    status?: PostStatus;
+    categoryId?: string;
+    limit?: number;
+  } = {}
+): Promise<PostWithAuthor[]> => {
+  const { authorId, status, categoryId, limit = 10 } = filters;
+
+  return await database
+    .select({
+      // Post fields
+      id: post.id,
+      title: post.title,
+      content: post.content,
+      status: post.status,
+      createdAt: post.createdAt,
+      publishedAt: post.publishedAt,
+      // Author fields
+      author: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        image: user.image
+      }
+    })
+    .from(post)
+    .innerJoin(user, eq(post.authorId, user.id))
+    .leftJoin(postCategory, eq(post.id, postCategory.postId))
+    .leftJoin(category, eq(postCategory.categoryId, category.id))
+    .where(
+      and(
+        isNull(user.deletedAt),
+        authorId ? eq(post.authorId, authorId) : undefined,
+        status ? eq(post.status, status) : undefined,
+        categoryId ? eq(category.id, categoryId) : undefined
+      )
+    )
+    .groupBy(post.id, user.id)
+    .orderBy(desc(post.createdAt))
+    .limit(limit);
+};
+
+// Aggregation queries
+export const getUserStatistics = async (userId: string) => {
+  const stats = await database
+    .select({
+      totalPosts: count(post.id),
+      publishedPosts: sum(
+        sql<number>`CASE WHEN ${post.status} = 'published' THEN 1 ELSE 0 END`
+      ),
+      draftPosts: sum(sql<number>`CASE WHEN ${post.status} = 'draft' THEN 1 ELSE 0 END`),
+      firstPostDate: min(post.createdAt),
+      lastPostDate: max(post.createdAt)
+    })
+    .from(post)
+    .where(eq(post.authorId, userId));
+
+  return stats[0];
+};
+```
+
+### 3. **Batch Operations**
+
+```typescript
+// ✅ Good - Efficient batch operations
+export const createMultiplePosts = async (
+  postsData: NewPost[]
+): Promise<QueryResult<Post[]>> => {
+  try {
+    const newPosts = await database.insert(post).values(postsData).returning();
+
+    return { data: newPosts, success: true };
+  } catch (error) {
+    return {
+      error: {
+        code: 'BATCH_CREATE_ERROR',
+        message: 'Failed to create posts',
+        details: error
+      },
+      success: false
+    };
+  }
+};
+
+export const updateMultipleUsers = async (
+  updates: Array<{ id: string; data: UserUpdate }>
+): Promise<QueryResult<User[]>> => {
+  try {
+    const updatedUsers: User[] = [];
+
+    // Use batch update with case statement for better performance
+    for (const update of updates) {
+      const [updatedUser] = await database
+        .update(user)
+        .set({
+          ...update.data,
+          updatedAt: new Date()
+        })
+        .where(eq(user.id, update.id))
+        .returning();
+
+      if (updatedUser) {
+        updatedUsers.push(updatedUser);
+      }
+    }
+
+    return { data: updatedUsers, success: true };
+  } catch (error) {
+    return {
+      error: {
+        code: 'BATCH_UPDATE_ERROR',
+        message: 'Failed to update users',
+        details: error
+      },
+      success: false
+    };
+  }
+};
+```
+
+## 🔄 Transaction Management
+
+### 1. **Transaction Patterns**
+
+```typescript
+// ✅ Good - Transaction with proper error handling
+import { database } from '@/database';
+
+export const createUserWithProfile = async (
+  userData: NewUser,
+  profileData: NewUserProfile
+): Promise<QueryResult<{ user: User; profile: UserProfile }>> => {
+  try {
+    const result = await database.transaction(async (tx) => {
+      // Create user first
+      const [newUser] = await tx.insert(user).values(userData).returning();
+
+      // Create profile with user ID
+      const [newProfile] = await tx
+        .insert(userProfile)
+        .values({
+          ...profileData,
+          userId: newUser.id
+        })
+        .returning();
+
+      return { user: newUser, profile: newProfile };
+    });
+
+    return { data: result, success: true };
+  } catch (error) {
+    return {
+      error: {
+        code: 'TRANSACTION_ERROR',
+        message: 'Failed to create user with profile',
+        details: error
+      },
+      success: false
+    };
+  }
+};
+
+// Complex transaction with rollback handling
+export const transferPostOwnership = async (
+  postId: string,
+  fromUserId: string,
+  toUserId: string
+): Promise<QueryResult<Post>> => {
+  try {
+    const result = await database.transaction(async (tx) => {
+      // Verify current ownership
+      const [currentPost] = await tx
+        .select()
+        .from(post)
+        .where(and(eq(post.id, postId), eq(post.authorId, fromUserId)))
+        .limit(1);
+
+      if (!currentPost) {
+        throw new Error('Post not found or user is not the owner');
+      }
+
+      // Verify target user exists
+      const [targetUser] = await tx
+        .select()
+        .from(user)
+        .where(eq(user.id, toUserId))
+        .limit(1);
+
+      if (!targetUser) {
+        throw new Error('Target user not found');
+      }
+
+      // Transfer ownership
+      const [updatedPost] = await tx
+        .update(post)
+        .set({
+          authorId: toUserId,
+          updatedAt: new Date()
+        })
+        .where(eq(post.id, postId))
+        .returning();
+
+      // Log the transfer
+      await tx.insert(postTransferLog).values({
+        postId,
+        fromUserId,
+        toUserId,
+        transferredAt: new Date()
+      });
+
+      return updatedPost;
+    });
+
+    return { data: result, success: true };
+  } catch (error) {
+    return {
+      error: {
+        code: 'TRANSFER_ERROR',
+        message: error instanceof Error ? error.message : 'Transfer failed',
+        details: error
+      },
+      success: false
+    };
+  }
+};
+```
+
+### 2. **Transaction Isolation Levels**
+
+```typescript
+// ✅ Good - Using appropriate isolation levels
+import { sql } from 'drizzle-orm';
+
+export const updateUserBalance = async (
+  userId: string,
+  amount: number
+): Promise<QueryResult<User>> => {
+  try {
+    const result = await database.transaction(async (tx) => {
+      // Set isolation level for financial operations
+      await tx.execute(sql`SET TRANSACTION ISOLATION LEVEL SERIALIZABLE`);
+
+      // Get current balance with row lock
+      const [currentUser] = await tx
+        .select()
+        .from(user)
+        .where(eq(user.id, userId))
+        .for('update'); // FOR UPDATE lock
+
+      if (!currentUser) {
+        throw new Error('User not found');
+      }
+
+      const newBalance = (currentUser.balance || 0) + amount;
+
+      if (newBalance < 0) {
+        throw new Error('Insufficient balance');
+      }
+
+      // Update balance
+      const [updatedUser] = await tx
+        .update(user)
+        .set({
+          balance: newBalance,
+          updatedAt: new Date()
+        })
+        .where(eq(user.id, userId))
+        .returning();
+
+      return updatedUser;
+    });
+
+    return { data: result, success: true };
+  } catch (error) {
+    return {
+      error: {
+        code: 'BALANCE_UPDATE_ERROR',
+        message: error instanceof Error ? error.message : 'Balance update failed',
+        details: error
+      },
+      success: false
+    };
+  }
+};
+```
+
+## 🔍 Query Optimization & Performance
+
+### 1. **Prepared Statements**
+
+```typescript
+// ✅ Good - Prepared statements for frequently used queries
+import { placeholder } from 'drizzle-orm';
+
+// Prepare frequently used queries
+const getUserByIdPrepared = database
+  .select()
+  .from(user)
+  .where(eq(user.id, placeholder('userId')))
+  .prepare();
+
+const getUserPostsPrepared = database
+  .select()
+  .from(post)
+  .where(eq(post.authorId, placeholder('authorId')))
+  .orderBy(desc(post.createdAt))
+  .limit(placeholder('limit'))
+  .prepare();
+
+export const getUserByIdOptimized = async (userId: string): Promise<User | null> => {
+  const result = await getUserByIdPrepared.execute({ userId });
+  return result[0] || null;
+};
+
+export const getUserPostsOptimized = async (
+  authorId: string,
+  limit: number = 10
+): Promise<Post[]> => {
+  return await getUserPostsPrepared.execute({ authorId, limit });
+};
+```
+
+### 2. **Query Optimization Techniques**
+
+```typescript
+// ✅ Good - Optimized queries with selective fields
+export const getUserProfileOptimized = async (userId: string) => {
+  // Select only needed fields
+  return await database
+    .select({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      image: user.image,
+      role: user.role
+    })
+    .from(user)
+    .where(eq(user.id, userId))
+    .limit(1);
+};
+
+// Use exists for better performance than joins
+export const getUsersWithPosts = async (): Promise<User[]> => {
+  return await database
+    .select()
+    .from(user)
+    .where(
+      sql`EXISTS (
+        SELECT 1 FROM ${post} 
+        WHERE ${post.authorId} = ${user.id}
+      )`
+    );
+};
+
+// Efficient counting with subqueries
+export const getUsersWithPostCounts = async () => {
+  return await database
+    .select({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      postCount: sql<number>`(
+        SELECT COUNT(*) 
+        FROM ${post} 
+        WHERE ${post.authorId} = ${user.id}
+      )`
+    })
+    .from(user)
+    .where(isNull(user.deletedAt));
+};
+```
+
+### 3. **Caching Strategies**
+
+```typescript
+// ✅ Good - Database result caching
+import { cache } from 'react';
+
+import { unstable_cache } from 'next/cache';
+
+// React cache for request-level caching
+export const getCachedUser = cache(async (userId: string): Promise<User | null> => {
+  return await getUserById(userId);
+});
+
+// Next.js cache for longer-term caching
+export const getCachedUserPosts = unstable_cache(
+  async (userId: string, limit: number = 10): Promise<Post[]> => {
+    return await database
+      .select()
+      .from(post)
+      .where(eq(post.authorId, userId))
+      .orderBy(desc(post.createdAt))
+      .limit(limit);
+  },
+  ['user-posts'],
+  {
+    revalidate: 60 * 5, // 5 minutes
+    tags: ['posts', 'user-posts']
+  }
+);
+
+// Manual cache invalidation
+export const invalidateUserPostsCache = async (userId: string) => {
+  // This would integrate with your cache invalidation strategy
+  // e.g., Redis KEYS pattern or tag-based invalidation
+};
+```
+
+## 🔧 Database Utilities & Helpers
+
+### 1. **Utility Functions**
+
+```typescript
+// ✅ Good - Database utilities
+import createSelectorUtils from 'drizzle-select-utils';
+
+import { database } from '@/database';
+
+// Enhanced utility functions
+export const databaseTakeUniqueOrThrow = <T extends unknown[]>(
+  values: T,
+  errorMessage = 'Expected exactly one result'
+): T[number] => {
+  if (values.length === 0) {
+    throw new Error(`${errorMessage}: No results found`);
+  }
+
+  if (values.length > 1) {
+    throw new Error(`${errorMessage}: Multiple results found`);
+  }
+
+  return values[0];
+};
+
+export const databaseTakeFirst = <T extends unknown[]>(values: T): T[number] | null => {
+  return values[0] || null;
+};
+
+// Selector utilities
+export const { selectOnly, selectExcept, getCount } = createSelectorUtils(database);
+
+// Custom selector for common user fields
+export const selectUserPublic = selectOnly(user, ['id', 'name', 'image', 'role']);
+export const selectUserPrivate = selectExcept(user, ['password']);
+
+// Pagination helper
+export const paginate = <T>(query: any, page: number, limit: number) => {
+  return query.limit(limit).offset((page - 1) * limit);
+};
+```
+
+### 2. **Validation Integration**
+
+```typescript
+// ✅ Good - Zod integration with database operations
+import { z } from 'zod';
+
+// Schema validation
+export const userCreateSchema = z.object({
+  name: z.string().min(2).max(100),
+  email: z.string().email(),
+  role: z.nativeEnum(UserRole).default(UserRole.USER)
+});
+
+export const userUpdateSchema = userCreateSchema.partial();
+
+// Validated database operations
+export const createUserValidated = async (
+  userData: unknown
+): Promise<QueryResult<User>> => {
+  try {
+    const validatedData = userCreateSchema.parse(userData);
+
+    return await createUser(validatedData);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid user data',
+          details: error.errors
+        },
+        success: false
+      };
+    }
+
+    throw error;
+  }
+};
+```
+
+## 🚀 Migration Strategies
+
+### 1. **Migration Best Practices**
+
+```typescript
+// ✅ Good - Safe migration patterns
+// migrations/0001_add_user_preferences.sql
+CREATE TABLE IF NOT EXISTS "user_preferences" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "user_id" uuid NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
+  "theme" text DEFAULT 'system' NOT NULL,
+  "language" text DEFAULT 'en' NOT NULL,
+  "notifications_enabled" boolean DEFAULT true NOT NULL,
+  "created_at" timestamp DEFAULT now() NOT NULL,
+  "updated_at" timestamp DEFAULT now() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS "user_preferences_user_id_idx" ON "user_preferences"("user_id");
+
+-- Add trigger for updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_user_preferences_updated_at
+  BEFORE UPDATE ON user_preferences
+  FOR EACH ROW
+  EXECUTE PROCEDURE update_updated_at_column();
+```
+
+### 2. **Schema Evolution**
+
+```bash
+# Migration workflow
+bun db:generate    # Generate migration files
+bun db:migrate     # Apply migrations
+bun db:studio      # Open Drizzle Studio
+bun db:reset       # Reset database (development only)
+```
+
+## 📊 Monitoring & Debugging
+
+### 1. **Query Logging**
+
+```typescript
+// ✅ Good - Enhanced query logging
+import { drizzle } from 'drizzle-orm/postgres-js';
+
+const database = drizzle(queryClient, {
+  schema,
+  logger:
+    env.NODE_ENV === 'development'
+      ? {
+          logQuery: (query, params) => {
+            console.log('🔍 Query:', query);
+            console.log('📝 Params:', params);
+            console.log('⏱️  Time:', new Date().toISOString());
+          }
+        }
+      : false
+});
+```
+
+### 2. **Performance Monitoring**
+
+```typescript
+// ✅ Good - Query performance tracking
+export const withQueryMetrics = async <T>(
+  queryName: string,
+  queryFn: () => Promise<T>
+): Promise<T> => {
+  const startTime = performance.now();
+
+  try {
+    const result = await queryFn();
+    const endTime = performance.now();
+
+    console.log(`📈 Query "${queryName}" took ${endTime - startTime}ms`);
+
+    return result;
+  } catch (error) {
+    const endTime = performance.now();
+    console.error(
+      `❌ Query "${queryName}" failed after ${endTime - startTime}ms:`,
+      error
+    );
+    throw error;
+  }
+};
+
+// Usage
+export const getUserWithMetrics = async (userId: string) => {
+  return withQueryMetrics('getUserById', () => getUserById(userId));
+};
+```
+
+## 🔒 Security Best Practices
+
+### 1. **SQL Injection Prevention**
+
+```typescript
+// ✅ Good - Always use parameterized queries
+import { sql } from 'drizzle-orm';
+
+// NEVER do this
+const unsafeQuery = (userInput: string) => {
+  return database.execute(sql`SELECT * FROM users WHERE name = '${userInput}'`);
+};
+
+// ✅ Always do this
+const safeQuery = (userInput: string) => {
+  return database.select().from(user).where(eq(user.name, userInput));
+};
+
+// For dynamic SQL, use sql template with proper parameterization
+const dynamicSafeQuery = (column: string, value: string) => {
+  const columnSql = sql.identifier(column);
+  return database
+    .select()
+    .from(user)
+    .where(sql`${columnSql} = ${value}`);
+};
+```
+
+### 2. **Row Level Security Integration**
+
+```typescript
+// ✅ Good - RLS-aware queries
+export const getUserOwnPosts = async (userId: string): Promise<Post[]> => {
+  // RLS policy ensures users only see their own posts
+  return await database.select().from(post).where(eq(post.authorId, userId));
+};
+
+// For admin queries, use service role connection
+export const getAllPostsAdmin = async (): Promise<Post[]> => {
+  // This would use a different connection with admin privileges
+  return await adminDatabase.select().from(post);
+};
+```
+
+## 📋 Best Practices Checklist
+
+### ✅ **Schema Design**
+
+- [ ] Use appropriate PostgreSQL data types
+- [ ] Define proper foreign key constraints
+- [ ] Add necessary indexes for query performance
+- [ ] Use enums for controlled vocabulary
+- [ ] Implement soft deletes where appropriate
+- [ ] Add created_at and updated_at timestamps
+
+### ✅ **Query Optimization**
+
+- [ ] Select only needed columns
+- [ ] Use prepared statements for frequent queries
+- [ ] Implement proper pagination
+- [ ] Use transactions for multi-table operations
+- [ ] Add query result caching where appropriate
+- [ ] Monitor query performance
+
+### ✅ **Type Safety**
+
+- [ ] Use Drizzle's type inference
+- [ ] Define explicit return types
+- [ ] Validate input data with Zod
+- [ ] Handle errors consistently
+- [ ] Use utility types for common patterns
+
+### ✅ **Security**
+
+- [ ] Always use parameterized queries
+- [ ] Implement proper access controls
+- [ ] Use connection pooling
+- [ ] Monitor for suspicious query patterns
+- [ ] Regular security audits
+
+This comprehensive guide ensures optimal database performance, security, and
+maintainability using Drizzle ORM with PostgreSQL in your Next.js application.
+alwaysApply: false
+
+---

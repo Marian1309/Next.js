@@ -1,0 +1,856 @@
+# 📋 Complete Project Documentation
+
+## 🏗️ Project Overview
+
+This is a cutting-edge, full-stack Next.js 15 application built with **TypeScript-first
+development**, following a **Server-First Architecture** paradigm. The project emphasizes
+**type safety**, **performance optimization**, **developer experience**, and **modern best
+practices**.
+
+### 🎯 Core Design Principles
+
+- **Server-First Architecture** - Minimize client-side JavaScript, maximize performance
+- **Type Safety Everywhere** - Strict TypeScript with comprehensive validation
+- **Developer Experience** - Hot reload, type checking, automated tooling
+- **Modern Tooling** - Latest versions of all dependencies and build tools
+- **Production Ready** - Comprehensive testing, monitoring, and deployment
+
+## 🛠️ Complete Technology Stack
+
+### 🚀 Framework & Runtime
+
+- **Next.js 15.3.5** - React framework with App Router and RSC
+- **React 19.1.0** - Latest React with Concurrent Features
+- **TypeScript 5** - Strict type checking and latest language features
+- **Bun 1.2.18** - Fast package manager and runtime
+- **Node.js 22+** - Required runtime environment
+
+### 🎨 Styling & UI
+
+- **Tailwind CSS 4** - Utility-first CSS framework (latest version)
+- **Shadcn/ui** - Modern, accessible component library
+- **Radix UI** - Headless UI primitives for accessibility
+- **Lucide React 0.525.0** - Beautiful, customizable icons
+- **Framer Motion 12.23.5** - Production-ready animation library
+- **Motion 12.23.6** - Advanced animation features
+
+### 🔐 Authentication & Authorization
+
+- **Better Auth 1.2.12** - Modern auth solution with advanced features
+- **@daveyplate/better-auth-ui 2.0.14** - Pre-built auth UI components
+- **Two-Factor Authentication** - TOTP and backup codes support
+- **OAuth Integration** - Google, GitHub social authentication
+- **Magic Links** - Passwordless authentication
+- **Email OTP** - One-time password verification
+
+### 🗄️ Database & Data Layer
+
+- **PostgreSQL** - Primary relational database
+- **Drizzle ORM 0.44.3** - Type-safe database toolkit
+- **Drizzle Kit 0.31.4** - Database migrations and introspection
+- **Redis (IORedis 5.6.1)** - Caching and session storage
+- **Convex 1.25.4** - Real-time backend services
+
+### 📡 State Management
+
+- **React Query 5.83.0** - Server state management and caching
+- **Zustand 5.0.6** - Lightweight client state management
+- **Nuqs 2.4.3** - URL-based state management
+- **React Hook Form 7.60.0** - Performant form management
+
+### 🔍 Validation & Schema
+
+- **Zod 4.0.5** - Runtime type validation
+- **@hookform/resolvers 5.1.1** - Form validation integration
+- **@t3-oss/env-nextjs 0.13.8** - Environment variable validation
+
+### ☁️ External Services
+
+- **Cloudflare R2** - Object storage and file uploads
+- **Resend 4.6.0** - Transactional email service
+- **OpenAI API** - AI capabilities and content generation
+- **Microsoft Clarity** - User behavior analytics
+- **Vercel** - Hosting and deployment platform
+
+### 🧪 Testing & Quality
+
+- **Vitest 3.2.4** - Unit and integration testing
+- **Playwright 1.54.1** - End-to-end testing
+- **@testing-library/react 16.3.0** - Component testing utilities
+- **Oxlint 1.6.0** - Fast, modern linting
+- **Prettier** - Code formatting with Tailwind plugin
+
+### 🛠️ Development Tools
+
+- **TypeScript 5** - Static type checking
+- **Husky 9.1.7** - Git hooks automation
+- **Lint-staged 16.1.2** - Pre-commit code quality
+- **Knip 5.61.3** - Dead code elimination
+- **Bundle Analyzer** - Performance monitoring
+
+## 📁 Detailed Project Structure
+
+```
+Next.js/
+├── 📂 .cursor/                           # Cursor IDE configuration
+│   ├── rules/                           # Development rules and guidelines
+│   │   ├── architecture.mdc            # This documentation file
+│   │   ├── convex.mdc                  # Convex-specific rules
+│   │   ├── nextjs.mdc                  # Next.js best practices
+│   │   └── testing.mdc                 # Testing guidelines
+│   └── mcp.json                        # Model Context Protocol config
+├── 📂 __tests__/                        # Testing infrastructure
+│   ├── e2n/                           # End-to-end tests (Playwright)
+│   │   └── example.test.ts
+│   └── unit/                          # Unit tests (Vitest)
+│       ├── ai-cost.test.ts
+│       └── bytes.test.ts
+├── 📂 src/                             # Main source code
+│   ├── 📂 actions/                     # Server Actions (Next.js)
+│   │   ├── ai.ts                      # OpenAI integration actions
+│   │   ├── auth.ts                    # Authentication actions
+│   │   ├── cookies.ts                 # Cookie management
+│   │   ├── email.ts                   # Email sending actions
+│   │   ├── ip.ts                      # IP address utilities
+│   │   ├── r2.ts                      # Cloudflare R2 file operations
+│   │   ├── redis.ts                   # Redis cache operations
+│   │   └── database/                  # Database-specific actions
+│   │       └── index.ts
+│   ├── 📂 app/                         # Next.js App Router
+│   │   ├── (root)/                    # Route group for main pages
+│   │   │   ├── page.tsx               # Home page (/)
+│   │   │   └── sign-out.tsx           # Sign out component
+│   │   ├── api/                       # API routes
+│   │   │   └── auth/                  # Authentication API
+│   │   │       └── [...all]/
+│   │   │           └── route.ts       # Better Auth API handler
+│   │   ├── auth/                      # Authentication pages
+│   │   │   └── [pathname]/
+│   │   │       └── page.tsx           # Dynamic auth pages
+│   │   ├── favicon.ico                # App favicon
+│   │   ├── globals.css                # Global styles
+│   │   ├── layout.tsx                 # Root layout component
+│   │   ├── loading.tsx                # Global loading component
+│   │   ├── not-found.tsx              # 404 error page
+│   │   └── providers.tsx              # React context providers
+│   ├── 📂 components/                  # React components
+│   │   ├── cuicui/                    # Custom UI components
+│   │   │   ├── index.ts               # Barrel exports
+│   │   │   └── simple-grid-pattern.tsx
+│   │   ├── emails/                    # Email templates (React Email)
+│   │   │   ├── index.ts
+│   │   │   ├── reset-password.tsx
+│   │   │   └── verify-email.tsx
+│   │   ├── kokonutui/                 # Advanced UI components
+│   │   │   ├── background-paths.tsx
+│   │   │   ├── beams-background.tsx
+│   │   │   ├── file-upload.tsx
+│   │   │   └── index.ts
+│   │   ├── layout/                    # Layout components
+│   │   │   ├── error.tsx              # Error boundary component
+│   │   │   ├── footer.tsx             # Site footer
+│   │   │   ├── header.tsx             # Site header
+│   │   │   └── index.ts
+│   │   ├── providers/                 # React context providers
+│   │   │   ├── better-auth-ui.tsx     # Auth UI provider
+│   │   │   ├── convex.tsx             # Convex provider
+│   │   │   ├── framer-motion.tsx      # Animation provider
+│   │   │   ├── fumadocs.tsx           # Documentation provider
+│   │   │   ├── next-themes.tsx        # Theme provider
+│   │   │   ├── next-toploader.tsx     # Loading indicator
+│   │   │   ├── react-dnd.tsx          # Drag & drop provider
+│   │   │   ├── react-hot-toast.tsx    # Toast notifications
+│   │   │   ├── react-query.tsx        # Query client provider
+│   │   │   └── index.ts
+│   │   ├── shared/                    # Shared components
+│   │   │   ├── bicecle-loader.tsx     # Loading animation
+│   │   │   └── index.ts
+│   │   ├── skiper-ui/                 # Custom UI utilities
+│   │   │   ├── theme-toggle-button.tsx
+│   │   │   ├── utils/
+│   │   │   │   └── theme-animations.ts
+│   │   │   └── index.ts
+│   │   └── ui/                        # Shadcn/ui components
+│   │       ├── accordion.tsx          # Accordion component
+│   │       ├── alert-dialog.tsx       # Alert dialog
+│   │       ├── alert.tsx              # Alert component
+│   │       ├── aspect-ratio.tsx       # Aspect ratio container
+│   │       ├── avatar.tsx             # User avatar
+│   │       ├── badge.tsx              # Status badge
+│   │       ├── breadcrumb.tsx         # Navigation breadcrumb
+│   │       ├── button.tsx             # Button component
+│   │       ├── calendar.tsx           # Date picker calendar
+│   │       ├── card.tsx               # Card container
+│   │       ├── carousel.tsx           # Image carousel
+│   │       ├── checkbox.tsx           # Checkbox input
+│   │       ├── collapsible.tsx        # Collapsible content
+│   │       ├── command.tsx            # Command palette
+│   │       ├── context-menu.tsx       # Right-click menu
+│   │       ├── dialog.tsx             # Modal dialog
+│   │       ├── drawer.tsx             # Slide-out drawer
+│   │       ├── dropdown-menu.tsx      # Dropdown menu
+│   │       ├── form.tsx               # Form components
+│   │       ├── hover-card.tsx         # Hover tooltip
+│   │       ├── input-otp.tsx          # OTP input
+│   │       ├── input.tsx              # Text input
+│   │       ├── label.tsx              # Form label
+│   │       ├── menubar.tsx            # Menu bar
+│   │       ├── navigation-menu.tsx    # Navigation menu
+│   │       ├── pagination.tsx         # Page navigation
+│   │       ├── popover.tsx            # Popover tooltip
+│   │       ├── progress.tsx           # Progress indicator
+│   │       ├── radio-group.tsx        # Radio button group
+│   │       ├── resizable.tsx          # Resizable panels
+│   │       ├── scroll-area.tsx        # Custom scrollbar
+│   │       ├── select.tsx             # Select dropdown
+│   │       ├── separator.tsx          # Visual separator
+│   │       ├── sheet.tsx              # Side sheet
+│   │       ├── sidebar.tsx            # Sidebar navigation
+│   │       ├── skeleton.tsx           # Loading skeleton
+│   │       ├── slider.tsx             # Range slider
+│   │       ├── sonner.tsx             # Toast component
+│   │       ├── switch.tsx             # Toggle switch
+│   │       ├── table.tsx              # Data table
+│   │       ├── tabs.tsx               # Tab navigation
+│   │       ├── textarea.tsx           # Multi-line input
+│   │       ├── toggle-group.tsx       # Toggle group
+│   │       ├── toggle.tsx             # Toggle button
+│   │       └── tooltip.tsx            # Tooltip component
+│   ├── 📂 config/                      # Configuration files
+│   │   ├── ai.ts                      # OpenAI client config
+│   │   ├── better-auth-client.ts      # Auth client setup
+│   │   ├── buckets.ts                 # R2 storage config
+│   │   ├── convex.ts                  # Convex client setup
+│   │   ├── cookies.ts                 # Cookie configuration
+│   │   ├── email.ts                   # Email service config
+│   │   ├── fumadocs.tsx               # Documentation config
+│   │   ├── react-query.ts             # Query client config
+│   │   └── redis.ts                   # Redis connection
+│   ├── 📂 constants/                   # Application constants
+│   │   ├── ai.ts                      # AI model constants
+│   │   ├── api.ts                     # API endpoints
+│   │   ├── assets.ts                  # Asset paths
+│   │   ├── cookies.ts                 # Cookie names
+│   │   ├── local-storage.ts           # LocalStorage keys
+│   │   └── redis.ts                   # Redis key patterns
+│   ├── 📂 convex/                      # Convex backend functions
+│   │   ├── _generated/                # Auto-generated files
+│   │   │   ├── api.d.ts
+│   │   │   ├── api.js
+│   │   │   ├── dataModel.d.ts
+│   │   │   ├── server.d.ts
+│   │   │   └── server.js
+│   │   ├── schema.ts                  # Convex schema definition
+│   │   ├── types.ts                   # Convex type definitions
+│   │   └── users.ts                   # User-related functions
+│   ├── 📂 database/                    # Database layer
+│   │   ├── auth-schema.ts             # Authentication tables
+│   │   ├── index.ts                   # Database connection
+│   │   ├── migrations/                # Database migrations
+│   │   │   ├── 0000_quick_beyonder.sql
+│   │   │   └── meta/
+│   │   │       ├── _journal.json
+│   │   │       └── 0000_snapshot.json
+│   │   ├── reset.ts                   # Database reset utilities
+│   │   ├── schema.ts                  # Application schema
+│   │   ├── types.ts                   # Database type definitions
+│   │   └── utils.ts                   # Database utilities
+│   ├── 📂 docs/                        # Documentation (Fumadocs)
+│   │   ├── docs/                      # Documentation pages
+│   │   │   ├── [[...slug]]/
+│   │   │   │   ├── mdx-components.tsx
+│   │   │   │   └── page.tsx
+│   │   │   └── layout.tsx
+│   │   ├── index.mdx                  # Documentation index
+│   │   ├── search/                    # Search functionality
+│   │   │   └── route.ts
+│   │   └── setup.txt                  # Setup instructions
+│   ├── 📂 helpers/                     # Utility functions
+│   │   ├── ai-cost.ts                 # AI usage cost calculations
+│   │   ├── bytes.ts                   # Byte formatting utilities
+│   │   ├── currency.ts                # Currency formatting
+│   │   ├── fetch-streamed-text.ts     # Streaming fetch utilities
+│   │   ├── logger.ts                  # Logging utilities
+│   │   ├── response.ts                # API response helpers
+│   │   ├── types.ts                   # Type utilities
+│   │   ├── url.ts                     # URL manipulation
+│   │   └── wait.ts                    # Async wait utilities
+│   ├── 📂 hooks/                       # Custom React hooks
+│   │   ├── use-clarity.ts             # Microsoft Clarity hook
+│   │   └── use-mobile.ts              # Mobile detection hook
+│   ├── 📂 lib/                         # Core library functions
+│   │   ├── auth.ts                    # Better Auth configuration
+│   │   ├── cn.ts                      # Class name utilities (clsx + tailwind-merge)
+│   │   ├── compress-image.ts          # Image compression
+│   │   ├── crypto.ts                  # Cryptographic utilities
+│   │   ├── date.ts                    # Date formatting utilities
+│   │   ├── fetch.ts                   # Enhanced fetch utilities
+│   │   ├── jwt.ts                     # JWT token utilities
+│   │   └── rate-limiter.ts            # Rate limiting utilities
+│   ├── env.ts                         # Environment variable validation
+│   ├── middleware.ts                  # Next.js middleware
+│   └── types.ts                       # Global type definitions
+├── 📄 Configuration Files
+│   ├── .cursorrules                   # Cursor IDE rules
+│   ├── .dockerignore                  # Docker ignore patterns
+│   ├── .gitignore                     # Git ignore patterns
+│   ├── .vscode/settings.json          # VS Code settings
+│   ├── components.json                # Shadcn/ui configuration
+│   ├── convex.json                    # Convex configuration
+│   ├── Dockerfile                     # Docker container config
+│   ├── Dockerfile.setup               # Docker setup config
+│   ├── drizzle.config.ts              # Drizzle ORM configuration
+│   ├── knip.json                      # Dead code analysis config
+│   ├── next.config.ts                 # Next.js configuration
+│   ├── package.json                   # Node.js dependencies
+│   ├── playwright.config.ts           # Playwright E2E config
+│   ├── postcss.config.mjs             # PostCSS configuration
+│   ├── prettier.config.js             # Code formatting config
+│   ├── tsconfig.json                  # TypeScript configuration
+│   └── vitest.config.mts              # Vitest testing config
+├── 📄 Documentation
+│   ├── assignments.txt                # Project assignments
+│   ├── LICENSE                        # Project license
+│   └── README.md                      # Project documentation
+```
+
+## 🏛️ Architecture Patterns
+
+### 1. **Server-First Architecture**
+
+The application follows a server-first approach, minimizing client-side JavaScript and
+maximizing performance:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Client Layer                            │
+├─────────────────────────────────────────────────────────────┤
+│ React Server Components (Default) │ Client Components      │
+│ • Static rendering by default      │ • Interactive elements │
+│ • Direct database access          │ • Browser APIs         │
+│ • SEO optimized                   │ • State management     │
+│ • Zero JS bundle                  │ • Event handlers       │
+└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                     Server Layer                            │
+├─────────────────────────────────────────────────────────────┤
+│ Server Actions │ API Routes │ Middleware │ Authentication   │
+│ • Form handling │ • REST API │ • Auth     │ • Session mgmt  │
+│ • Data mutation │ • External │ • Redirect │ • OAuth flow    │
+│ • Validation   │   APIs     │ • Logging  │ • 2FA support   │
+│ • Direct DB    │ • Webhooks │ • Rate     │ • Role-based    │
+│   access       │            │   limiting │   authorization │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 2. **Layered Architecture**
+
+The application is organized into distinct layers with clear responsibilities:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                  Presentation Layer                         │
+│  🎨 Components │ 📄 Pages │ 🖥️ Layouts │ 🎯 UI Elements  │
+│  • React Server Components    │ • Shadcn/ui components     │
+│  • Client Components          │ • Custom animations        │
+│  • Form handling              │ • Responsive design        │
+│  • Error boundaries           │ • Accessibility features   │
+└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    Business Layer                           │
+│  ⚡ Server Actions │ 🪝 Hooks │ 🛠️ Utilities │ ✅ Validation │
+│  • Authentication logic       │ • Custom React hooks       │
+│  • Data mutations            │ • Business logic           │
+│  • Email operations          │ • Zod schema validation    │
+│  • File uploads              │ • Type-safe operations     │
+└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                     Data Layer                              │
+│  🗄️ Database │ 💾 Cache │ 🌐 External APIs │ 📁 Storage   │
+│  • PostgreSQL with Drizzle   │ • Redis caching           │
+│  • Convex real-time data     │ • OpenAI integration      │
+│  • Type-safe queries         │ • Cloudflare R2 storage   │
+│  • Automated migrations      │ • Email service (Resend)  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 3. **Authentication Architecture**
+
+Comprehensive authentication system with multiple methods and security features:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                  Authentication Methods                      │
+├─────────────────────────────────────────────────────────────┤
+│ 📧 Email/Password │ 🔐 OAuth Providers │ ✨ Passwordless  │
+│ • User registration        │ • Google OAuth        │ • Magic links │
+│ • Email verification      │ • GitHub OAuth        │ • Email OTP   │
+│ • Password reset           │ • Account linking     │ • One-tap     │
+│ • 2FA with TOTP           │ • Profile sync        │   login       │
+│ • HaveIBeenPwned check    │ • Social login        │ • Quick auth  │
+└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    Security Features                         │
+├─────────────────────────────────────────────────────────────┤
+│ 🛡️ Session Management │ 🔒 Data Protection │ 🚫 Rate Limiting │
+│ • Secure cookies          │ • Input validation    │ • Auth endpoints │
+│ • Session refresh         │ • SQL injection       │ • API protection │
+│ • Device tracking         │   prevention          │ • Brute force    │
+│ • Auto-expiration        │ • XSS protection      │   protection     │
+│ • Impersonation support  │ • CSRF protection     │ • DDoS mitigation│
+└─────────────────────────────────────────────────────────────┘
+```
+
+## 🗄️ Database Architecture
+
+### Database Schema Organization
+
+The database is organized into logical modules with clear separation of concerns:
+
+```
+database/
+├── 📋 auth-schema.ts              # Authentication & User Management
+│   ├── 👤 user                   # User profiles and accounts
+│   ├── 🎫 session                # User sessions and tokens
+│   ├── 🔗 account                # OAuth provider accounts
+│   ├── ✅ verification           # Email verification tokens
+│   ├── 🔐 twoFactor              # 2FA secrets and backup codes
+│   ├── 🏢 organization           # Multi-tenant organizations
+│   ├── 👥 member                 # Organization memberships
+│   ├── 📨 invitation             # Organization invitations
+│   └── 🔑 jwks                   # JSON Web Key Sets
+├── 📊 schema.ts                   # Application-specific tables
+│   └── (Application tables will be defined here)
+└── 🔄 migrations/                 # Database version control
+    ├── SQL migration files
+    └── meta/                      # Migration metadata
+        ├── _journal.json
+        └── snapshot files
+```
+
+### Database Configuration Features
+
+- **🔗 Connection Pooling** - Optimized pool settings for high performance
+- **📝 Prepared Statements** - Security and performance optimization
+- **🔄 Migration System** - Version-controlled schema changes
+- **🔒 Type Safety** - End-to-end type safety with Drizzle ORM
+- **🎯 Singleton Pattern** - Efficient connection management
+- **📊 Query Optimization** - Automatic query analysis and optimization
+
+## 🔄 State Management Strategy
+
+### Comprehensive State Architecture
+
+The application uses a layered approach to state management, choosing the right tool for
+each use case:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    State Management Layers                  │
+├─────────────────────────────────────────────────────────────┤
+│ 🔗 URL State (Nuqs) │ 🌐 Server State │ 💻 Client State   │
+│ • Search filters            │ • API responses       │ • UI state     │
+│ • Pagination params         │ • Database queries    │ • Form data    │
+│ • Sort preferences          │ • Cache management    │ • Modal state  │
+│ • Selected items            │ • Real-time updates   │ • Theme prefs  │
+│ • View configurations       │ • Optimistic updates  │ • Temp data    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### State Management Flow
+
+1. **🔗 URL State (Nuqs)** - For shareable, bookmarkable application state
+2. **🌐 Server State (React Query)** - For API data with intelligent caching
+3. **💻 Local State (useState)** - For component-specific UI state
+4. **🌍 Global State (Zustand)** - For cross-component shared state
+
+### React Query Configuration
+
+Advanced caching and optimization strategies:
+
+```typescript
+// Optimized for performance and memory efficiency
+const queryConfig = {
+  staleTime: 5 * 60 * 1000, // 5 minutes fresh data
+  retry: smartRetryLogic, // Avoid retrying 4xx errors
+  refetchOnWindowFocus: false, // Reduce unnecessary requests
+  gcTime: 10 * 60 * 1000 // 10 minutes garbage collection
+};
+```
+
+## 🚀 Performance Optimization
+
+### Next.js Optimizations
+
+The application implements comprehensive performance optimizations:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   Performance Features                      │
+├─────────────────────────────────────────────────────────────┤
+│ 🖥️ Server Components │ 📦 Bundle Splitting │ 🖼️ Image Opt  │
+│ • Zero client JS by default   │ • Route-based splitting │ • WebP/AVIF  │
+│ • Direct database access      │ • Dynamic imports       │ • Lazy loading│
+│ • SEO optimized               │ • Code splitting        │ • Responsive  │
+│ • Static rendering            │ • Tree shaking         │ • Compression │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Caching Strategy
+
+Multi-layered caching for optimal performance:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   Caching Architecture                      │
+├─────────────────────────────────────────────────────────────┤
+│ 🌐 Browser Cache │ 🚀 CDN Cache │ 💾 Redis Cache │ 🗄️ DB Cache │
+│ • Static assets   │ • Static pages │ • User sessions │ • Query cache│
+│ • API responses   │ • Images       │ • Rate limiting │ • Computed   │
+│ • Font files      │ • CSS/JS       │ • Temp data     │   results    │
+│ • Service worker  │ • Edge caching │ • Session store │ • Aggregated │
+│                   │                │                 │   data       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Bundle Analysis
+
+- **📊 Bundle Analyzer** - Visualize bundle composition
+- **🔍 Dead Code Detection** - Remove unused code with Knip
+- **📈 Performance Monitoring** - Track Core Web Vitals
+- **⚡ Turbopack** - Next-generation bundler for faster builds
+
+## 🔒 Security Implementation
+
+### Comprehensive Security Measures
+
+The application implements defense-in-depth security:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Security Layers                          │
+├─────────────────────────────────────────────────────────────┤
+│ 🛡️ Input Validation │ 🔐 Data Protection │ 🚫 Access Control │
+│ • Zod schema validation       │ • SQL injection prevention│ • Role-based auth │
+│ • XSS prevention             │ • Prepared statements     │ • Route protection│
+│ • CSRF protection            │ • Data sanitization       │ • API security   │
+│ • Rate limiting              │ • Encrypted storage       │ • Session mgmt   │
+│ • Request size limits        │ • Secure headers          │ • 2FA support    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Security Features Detail
+
+- **🔐 Authentication Security**
+  - HaveIBeenPwned password checking
+  - Two-factor authentication (TOTP)
+  - Secure session management
+  - Account linking protection
+
+- **🛡️ Data Protection**
+  - Input validation with Zod
+  - SQL injection prevention
+  - XSS protection
+  - CSRF token validation
+
+- **🚫 Rate Limiting**
+  - Authentication endpoint protection
+  - API rate limiting
+  - Brute force prevention
+  - DDoS mitigation
+
+## 📧 Email System Architecture
+
+### Complete Email Infrastructure
+
+Modern email system with templates and delivery optimization:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Email System Architecture                │
+├─────────────────────────────────────────────────────────────┤
+│ 📧 Templates (React Email) │ 🚀 Delivery (Resend) │ ⚡ Triggers │
+│ • Verification emails         │ • High deliverability  │ • Auth events │
+│ • Password reset emails       │ • Analytics tracking   │ • User actions│
+│ • Magic link emails          │ • Error handling       │ • Scheduled   │
+│ • OTP delivery              │ • Bounce management    │   emails      │
+│ • Organization invites       │ • Reputation monitoring│ • Webhooks    │
+│ • Custom templates           │ • A/B testing         │ • Workflows   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Email Features
+
+- **📧 React Email Templates** - Type-safe, reusable email components
+- **🚀 Resend Integration** - Modern email delivery service
+- **📊 Analytics** - Email open rates, click tracking
+- **🔄 Automation** - Triggered emails for user actions
+- **🛡️ Security** - SPF, DKIM, DMARC configuration
+
+## 🧪 Testing Strategy
+
+### Comprehensive Testing Architecture
+
+Multi-layered testing approach for reliability and quality:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Testing Pyramid                          │
+├─────────────────────────────────────────────────────────────┤
+│ 🎭 E2E Tests (10%) │ 🔗 Integration (20%) │ 🧪 Unit (70%)   │
+│ • User workflows          │ • API integration        │ • Pure functions │
+│ • Cross-browser testing   │ • Database operations    │ • Components     │
+│ • Authentication flows    │ • External services      │ • Utilities      │
+│ • Critical user paths     │ • Form submissions       │ • Business logic │
+│ • Performance testing     │ • Error scenarios        │ • Edge cases     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Testing Tools & Configuration
+
+- **🧪 Vitest** - Fast unit testing with hot reload
+- **🎭 Playwright** - Cross-browser E2E testing
+- **🧩 Testing Library** - Component testing utilities
+- **📊 Coverage Reports** - Comprehensive test coverage
+- **🔄 CI/CD Integration** - Automated testing pipeline
+
+### Test Organization
+
+```
+__tests__/
+├── unit/                     # Unit tests (Vitest)
+│   ├── components/          # Component tests
+│   ├── hooks/              # Custom hook tests
+│   ├── utils/              # Utility function tests
+│   └── actions/            # Server action tests
+├── integration/            # Integration tests
+│   ├── api/                # API endpoint tests
+│   └── database/           # Database operation tests
+├── e2e/                    # End-to-end tests (Playwright)
+│   ├── auth.spec.ts        # Authentication flows
+│   ├── user-flows.spec.ts  # Critical user journeys
+│   └── accessibility.spec.ts # A11y compliance
+└── utils/                  # Test utilities
+    ├── test-utils.tsx      # Custom render functions
+    ├── mocks.ts           # Mock factories
+    └── fixtures/          # Test data
+```
+
+## 🛠️ Development Workflow
+
+### Development Scripts & Commands
+
+```bash
+# 🚀 Development
+bun dev                 # Start development server with hot reload
+bun dev --turbo        # Start with Turbopack (faster builds)
+bun dev:debug          # Start with debugging enabled
+
+# 🗄️ Database Operations
+bun db:gen             # Generate database migrations
+bun db:push            # Push schema changes to database
+bun db:pull            # Pull schema from database
+bun db:migrate         # Run pending migrations
+bun db:studio          # Open Drizzle Studio (database GUI)
+
+# 🔐 Authentication
+bun auth:gen           # Generate Better Auth configuration
+
+# 🏗️ Build & Deploy
+bun build              # Production build with optimizations
+bun build:production   # Production build with NODE_ENV=production
+bun build:analyze      # Build with bundle analysis
+bun start              # Start production server
+bun deploy             # Deploy to Vercel
+
+# 🧹 Code Quality
+bun lint               # Run Oxlint for code quality
+bun format             # Format code with Prettier
+bun knip               # Find unused dependencies and code
+bun unused             # Check for unused dependencies
+
+# 🧪 Testing
+bun test:unit          # Run unit tests with Vitest
+bun test:e2e           # Run end-to-end tests with Playwright
+
+# 🔧 Utilities
+bun clean              # Clean build artifacts and dependencies
+bun check:up           # Check for dependency updates
+bun optimize           # Build and analyze bundle
+```
+
+### Code Quality Tools
+
+- **🔍 Oxlint** - Fast, modern TypeScript/JavaScript linter
+- **💅 Prettier** - Opinionated code formatter with Tailwind plugin
+- **📏 TypeScript** - Strict type checking and latest language features
+- **🪝 Husky** - Git hooks for automated quality checks
+- **🎯 Lint-staged** - Run quality tools on staged files only
+- **🗑️ Knip** - Dead code elimination and dependency analysis
+
+## 📦 Deployment & Infrastructure
+
+### Production Deployment Strategy
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Deployment Pipeline                      │
+├─────────────────────────────────────────────────────────────┤
+│ 💻 Development │ 🔍 Staging │ 🚀 Production │ 🌍 Edge        │
+│ • Local environment        │ • Preview deployments  │ • Global CDN   │
+│ • Hot reload               │ • Testing environment   │ • Edge compute │
+│ • Debug mode               │ • Integration tests     │ • Auto-scaling │
+│ • Mock services            │ • Performance testing   │ • Monitoring   │
+│ • Instant feedback         │ • Security scanning     │ • Analytics    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Infrastructure Components
+
+- **🚀 Vercel Platform** - Serverless deployment with global edge network
+- **🐳 Docker Support** - Containerization for consistent deployments
+- **🌍 Edge Functions** - Serverless functions at the edge
+- **📈 Auto-scaling** - Automatic resource scaling based on demand
+- **🔒 SSL/TLS** - Automatic HTTPS with certificate management
+
+### Environment Configuration
+
+```typescript
+// Type-safe environment variables with validation
+export const env = createEnv({
+  server: {
+    // Server-side variables
+    DATABASE_URL: z.string().url(),
+    REDIS_URL: z.string().url(),
+    OPENAI_API_KEY: z.string()
+    // ... other server variables
+  },
+  client: {
+    // Client-side variables (must be prefixed with NEXT_PUBLIC_)
+    NEXT_PUBLIC_BASE_URL: z.string().url(),
+    NEXT_PUBLIC_CONVEX_URL: z.string().url()
+    // ... other client variables
+  },
+  // Runtime environment mapping
+  runtimeEnv: {
+    /* ... */
+  }
+});
+```
+
+## 🔍 Monitoring & Analytics
+
+### Comprehensive Monitoring Stack
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   Monitoring & Analytics                    │
+├─────────────────────────────────────────────────────────────┤
+│ 📊 User Analytics │ ⚡ Performance │ 🐛 Error Tracking    │
+│ • Microsoft Clarity       │ • Core Web Vitals      │ • Structured logging│
+│ • User behavior tracking  │ • Bundle analysis      │ • Error boundaries  │
+│ • Heatmaps and sessions   │ • Database monitoring  │ • Crash reporting   │
+│ • Conversion funnels      │ • API response times   │ • Debug information │
+│ • A/B testing support     │ • Memory usage         │ • Stack traces      │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Analytics Features
+
+- **📈 Microsoft Clarity** - Free user behavior analytics
+- **⚡ Vercel Analytics** - Performance and Core Web Vitals monitoring
+- **🔍 Real User Monitoring** - Actual user experience tracking
+- **📊 Custom Events** - Track business-specific metrics
+- **🚨 Alert System** - Proactive issue notification
+
+## 🎯 Best Practices Implementation
+
+### Code Organization Principles
+
+- **📦 Barrel Exports** - Clean, organized imports with index files
+- **🏷️ Consistent Naming** - Clear, descriptive naming conventions
+- **🔒 Type-First Development** - TypeScript-first approach
+- **🧩 Composition over Inheritance** - React composition patterns
+- **📐 Single Responsibility** - Each function/component has one job
+
+### Performance Best Practices
+
+- **🖥️ Server-First Rendering** - Minimize client-side JavaScript
+- **📦 Efficient Bundle Splitting** - Route-based and dynamic imports
+- **🖼️ Optimized Image Delivery** - WebP/AVIF with responsive loading
+- **💾 Intelligent Caching** - Multi-layer caching strategies
+- **⚡ Lazy Loading** - Load resources when needed
+
+### Security Best Practices
+
+- **🛡️ Defense in Depth** - Multiple security layers
+- **✅ Input Validation** - Validate at all application layers
+- **🔒 Secure by Default** - Security-first configuration
+- **🔍 Regular Audits** - Automated security scanning
+- **📦 Dependency Management** - Keep dependencies updated and secure
+
+## 🔄 Data Flow Architecture
+
+### Request Lifecycle
+
+Complete request processing flow with security and optimization:
+
+```
+🌐 Client Request → 🛡️ Middleware → 🛣️ Route Handler → ⚡ Server Action → 🗄️ Database
+     ↓                ↓              ↓                ↓               ↓
+  🔐 Auth Check → 🚫 Rate Limit → ✅ Validation → 💼 Business Logic → 📊 Data Access
+     ↓                ↓              ↓                ↓               ↓
+  🔄 Redirect ← 🚨 Error Handle ← 📤 Response ← 🔄 Transform ← 📋 Query Results
+```
+
+### State Synchronization
+
+- **⚡ Optimistic Updates** - Immediate UI feedback with rollback
+- **🔄 Real-time Sync** - Live updates with Convex
+- **💾 Cache Invalidation** - Smart cache management strategies
+- **🔀 Conflict Resolution** - Handle concurrent data modifications
+
+## 🚀 Future Scalability
+
+### Horizontal Scaling Considerations
+
+The architecture is designed for scale with these considerations:
+
+- **🔗 Database Connection Pooling** - Efficient database connections
+- **💾 Redis Clustering** - Distributed caching layer
+- **🌐 CDN Optimization** - Global content distribution
+- **⚡ Edge Computing** - Compute at the edge for global performance
+- **🏗️ Microservices Ready** - Clear boundaries for service extraction
+
+### Vertical Scaling Features
+
+- **📊 Performance Monitoring** - Identify bottlenecks proactively
+- **🔧 Resource Optimization** - Efficient memory and CPU usage
+- **🗄️ Database Query Optimization** - Smart query analysis
+- **💾 Memory Management** - Efficient memory allocation strategies
+
+## 📚 Documentation Standards
+
+### Code Documentation
+
+- **📝 Inline Comments** - Explain complex business logic
+- **📋 Function Documentation** - JSDoc for all public functions
+- **🔗 API Documentation** - Comprehensive API reference
+- **📖 Architecture Decisions** - Document design choices
+
+### Development Guidelines
+
+- **🎯 Component Design** - Reusable, accessible components
+- **🔒 Type Safety** - Comprehensive TypeScript usage
+- **🧪 Testing Requirements** - Test coverage for critical paths
+- **🚀 Performance Standards** - Core Web Vitals targets
+
+---
+
+This architecture provides a solid, scalable foundation for building modern web
+applications with cutting-edge technologies, comprehensive security, optimal performance,
+and exceptional developer experience. The system is designed to handle growth from startup
+to enterprise scale while maintaining code quality and developer productivity.
+
+performant web applications with modern development practices and cutting-edge
+technologies.

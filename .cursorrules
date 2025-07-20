@@ -1,0 +1,81 @@
+Complex Rule Set for Your Technology Stack General Principles Focus: Write concise,
+readable, maintainable, and DRY (Don't Repeat Yourself) code. Type Safety: Leverage
+TypeScript for all codebases with strict typing and no any usage unless unavoidable. Early
+Returns: Use guard clauses and early returns to reduce nesting and improve readability.
+Accessibility: Ensure all interactive elements include ARIA attributes, keyboard
+navigation, and semantic HTML. Modularity: Break down code into reusable components,
+hooks, and utilities. Planning and Implementation Process Step-by-Step Plan: For every
+task, outline a detailed pseudocode plan before coding. Confirmation: Confirm the plan
+with the user before proceeding to implementation. Full Implementation: Deliver complete,
+bug-free code with no placeholders or TODOs. Verification: Thoroughly test and verify
+functionality aligns with requirements. Core Technologies React & React Hooks Use
+functional components exclusively with hooks (e.g., useState, useEffect, useMemo). Avoid
+classes and prefer declarative patterns. Minimize useEffect usage; favor React Server
+Components (RSC) in Next.js where possible. Use useCallback for memoized event handlers
+and useMemo for expensive computations. Implement custom hooks for reusable logic (e.g.,
+useAuth, useFetchData). Follow Rules of Hooks: Call hooks only at the top level and within
+React functions. TypeScript Define explicit types/interfaces for props, state, and API
+responses. Use utility types (e.g., Partial, Pick, Omit) to enhance type safety. Avoid
+type assertions (as) unless strictly necessary; prefer proper typing. Use const assertions
+for literal types (e.g., as const). Next.js (RSC, Server Actions) Leverage App Router for
+routing and file-based structure. Prefer Server Components over Client Components to
+reduce client-side JavaScript. Use 'use client' directive only for components requiring
+browser APIs (e.g., window, document). Implement Server Actions for mutations and form
+handling. Use dynamic imports (next/dynamic) for code splitting and lazy loading. Optimize
+images with next/image (WebP format, lazy loading, size attributes). Astro (Landing Page)
+Use Astro for static landing pages with minimal JavaScript. Integrate React components via
+Astro’s React integration for interactive sections. Leverage Astro’s island architecture
+for partial hydration. Use TypeScript for type-safe Astro components. Styling & UI
+Tailwind CSS Use Tailwind utility classes exclusively for styling; avoid raw CSS or
+
+<style> tags. Favor class: syntax over ternary operators for conditional classes.
+Implement mobile-first responsive design with Tailwind’s breakpoints (e.g., sm:, md:,
+lg:). Use descriptive class combinations (e.g., flex items-center justify-between). Shadcn
+UI Integrate Shadcn UI components for reusable, customizable UI elements. Customize
+components via Tailwind classes rather than overriding CSS. Ensure accessibility (e.g.,
+ARIA labels, keyboard support) in all Shadcn components. Lucide-React (Icons) Use
+Lucide-React icons for consistent, lightweight SVGs. Pass Tailwind classes via the
+className prop for styling (e.g., size-6 text-gray-600). Ensure icons are accessible with
+aria-hidden="true" when decorative. State Management & Data Fetching Nuqs (URL Search
+Params) Use Nuqs for managing URL-based state (e.g., filters, pagination). Define types
+for query parameters with TypeScript. Keep state in sync with URL changes without
+unnecessary re-renders. Zustand (Global State) Use Zustand for lightweight global state
+management. Define stores with TypeScript interfaces (e.g., interface AuthState). Avoid
+overusing Zustand; lift state up or use context for component-specific needs. Use
+middleware (e.g., persist) for local storage integration. React Query (TanStack Query) Use
+React Query for server-state management and data fetching. Define query keys with arrays
+(e.g., ['users', userId]) for cache granularity. Implement optimistic updates and error
+boundaries for mutations. Use useQuery and useMutation with TypeScript generics for type
+safety. Zod (Validation) Use Zod for schema validation of forms, API responses, and
+inputs. Define reusable schemas (e.g., userSchema) and infer types with z.infer. Integrate
+with React Query and Server Actions for end-to-end validation. Backend & Database Drizzle
+(ORM) Use Drizzle for type-safe database queries with Supabase. Define schema files with
+TypeScript (e.g., schema/users.ts). Use prepared statements for performance and security.
+Leverage Drizzle’s relational query API for complex joins. Supabase (Database) Use
+Supabase client for direct database access in Server Components. Implement row-level
+security (RLS) policies for secure data access. Use Supabase’s real-time subscriptions
+sparingly and with proper cleanup. Fetch data in Server Actions or API routes for SSR.
+Next-auth (Authentication) Use Next-auth v5 for authentication with Supabase as the
+backend. Implement OAuth providers (e.g., Google, GitHub) and credentials-based login. Use
+Server Components to check session state via getServerSession. Secure routes with
+middleware (/middleware.ts) and redirect unauthenticated users. Code Style & Structure
+Naming Conventions Variables: Use descriptive names with auxiliary verbs (e.g., isLoading,
+hasError). Functions: Prefix event handlers with handle (e.g., handleSubmit,
+handleKeyDown). Components: Use PascalCase (e.g., UserProfile). Directories: Use lowercase
+with dashes (e.g., components/auth-form). Code Implementation Guidelines Use const over
+function declarations (e.g., const toggle = () =>). Define TypeScript types/interfaces for
+all props and state. Use early returns to handle errors or invalid states. Avoid inline
+styles; use Tailwind classes. Implement accessibility (e.g., tabIndex="0", aria-label,
+onKeyDown). Performance & Optimization Minimize client-side JavaScript with Next.js Server
+Components. Use dynamic imports for non-critical components (e.g., dynamic(() =>
+import('./HeavyComponent'))). Optimize images with next/image (WebP, lazy loading).
+Implement route-based code splitting in Next.js. Use React Query’s caching to reduce API
+calls. Security & Error Handling Sanitize inputs to prevent XSS (e.g., avoid
+dangerouslySetInnerHTML without sanitization). Use Zod for runtime validation of all user
+inputs and API responses. Implement error boundaries in React components. Handle edge
+cases with guard clauses and early returns. Log errors server-side (e.g., in Server
+Actions) and show user-friendly messages. Accessibility (a11y) Use semantic HTML (e.g.,
+<nav>, <main>, <button>). Add ARIA attributes (e.g., aria-label, role) where necessary.
+Ensure keyboard navigation with tabIndex and onKeyDown. Test with screen readers and
+maintain sufficient color contrast.
+use only type, not interfaces in typescript

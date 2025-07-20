@@ -1,0 +1,577 @@
+---
+alwaysApply: true
+---
+
+# TypeScript Rules & Best Practices
+
+## 🎯 Core Principles
+
+### 1. **Type-First Development**
+
+- Define types before implementing functionality
+- Use TypeScript's strict mode for maximum type safety
+- Avoid `any` type unless absolutely necessary
+- Prefer explicit typing over implicit inference where it improves clarity
+
+### 2. **Strict TypeScript Configuration**
+
+```json
+{
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "moduleResolution": "bundler",
+    "isolatedModules": true,
+    "incremental": true
+  }
+}
+```
+
+### 3. **Import Type Conventions**
+
+- Use `import type` for type-only imports
+- Separate type imports from value imports
+- Use named imports for better tree-shaking
+
+```typescript
+// ✅ Good
+import type { ReactNode } from 'react';
+import type { Session } from '@/types';
+import { useState } from 'react';
+
+// ❌ Bad
+import { ReactNode, useState } from 'react';
+```
+
+## 📋 Type Definition Patterns
+
+### 1. **Use `type` Over `interface`**
+
+Following project conventions, prefer `type` declarations:
+
+```typescript
+// ✅ Good
+type User = {
+  id: string;
+  name: string;
+  email: string;
+};
+
+type UserWithRole = User & {
+  role: 'admin' | 'user';
+};
+
+// ❌ Avoid
+interface User {
+  id: string;
+  name: string;
+  email: string;
+}
+```
+
+### 2. **Generic Response Types**
+
+Create reusable response types for consistent API responses:
+
+```typescript
+type Response<T> = {
+  message: string;
+  data: T;
+  success: boolean;
+};
+
+// Usage
+type UserResponse = Response<User>;
+type UsersResponse = Response<User[]>;
+```
+
+### 3. **Enum Patterns**
+
+Use TypeScript enums for well-defined constants:
+
+```typescript
+export enum Role {
+  ADMIN = 'admin',
+  USER = 'user'
+}
+
+// In schema
+role: text('role').$type<Role>().default(Role.USER);
+```
+
+## 🏗️ Component Typing
+
+### 1. **Props Typing**
+
+Always define explicit props types:
+
+```typescript
+type ButtonProps = ComponentProps<'button'> &
+  VariantProps<typeof buttonVariants> & {
+    asChild?: boolean;
+  };
+
+const Button = ({ className, variant, size, asChild = false, ...props }: ButtonProps) => {
+  // Component implementation
+};
+```
+
+### 2. **Children Props**
+
+Use `ReactNode` for children:
+
+```typescript
+type ProviderProps = {
+  children: ReactNode;
+  className?: string;
+};
+
+const Provider = ({ children, className }: ProviderProps) => {
+  return <div className={className}>{children}</div>;
+};
+```
+
+### 3. **Ref Forwarding**
+
+Type refs properly when forwarding:
+
+```typescript
+type InputProps = ComponentProps<'input'>;
+
+const Input = forwardRef<HTMLInputElement, InputProps>(
+  ({ className, type, ...props }, ref) => {
+    return (
+      <input
+        type={type}
+        className={cn(inputVariants({ className }))}
+        ref={ref}
+        {...props}
+      />
+    );
+  }
+);
+```
+
+## 🔧 Server Actions & API Typing
+
+### 1. **Server Action Parameters**
+
+Define explicit parameter types:
+
+```typescript
+export const signUpByEmail = async (params: {
+  name: string;
+  email: string;
+  password: string;
+}) => {
+  // Implementation
+};
+```
+
+### 2. **Response Helpers**
+
+Create typed response helpers:
+
+```typescript
+export const response = <T>(params: Response<T>): Response<T> => ({
+  message: params.message,
+  data: params.data,
+  success: params.success
+});
+```
+
+### 3. **Error Handling**
+
+Type error responses consistently:
+
+```typescript
+type AuthError = {
+  success: false;
+  message: string;
+};
+
+type AuthSuccess = {
+  success: true;
+  message: string;
+  data?: User;
+};
+
+type AuthResponse = AuthSuccess | AuthError;
+```
+
+## 🗄️ Database Schema Typing
+
+### 1. **Drizzle Schema Types**
+
+Use proper column types with Drizzle:
+
+```typescript
+export const user = pgTable('user', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  email: text('email').notNull().unique(),
+  emailVerified: boolean('email_verified')
+    .$defaultFn(() => false)
+    .notNull(),
+  role: text('role').$type<Role>().default(Role.USER),
+  createdAt: timestamp('created_at')
+    .$defaultFn(() => new Date())
+    .notNull()
+});
+```
+
+### 2. **Inferred Types**
+
+Use Drizzle's type inference:
+
+```typescript
+type User = typeof user.$inferSelect;
+type NewUser = typeof user.$inferInsert;
+```
+
+### 3. **Schema Relationships**
+
+Type relationships properly:
+
+```typescript
+type UserWithSessions = User & {
+  sessions: Session[];
+};
+```
+
+## 🔧 Configuration Typing
+
+### 1. **Environment Variables**
+
+Use `@t3-oss/env-nextjs` for type-safe environment variables:
+
+```typescript
+export const env = createEnv({
+  server: {
+    DATABASE_URL: z.string().optional(),
+    OPENAI_API_KEY: z.string(),
+    NODE_ENV: z.enum(['development', 'production']).default('development')
+  },
+  client: {
+    NEXT_PUBLIC_BASE_URL: z.string().url(),
+    NEXT_PUBLIC_GOOGLE_CLIENT_ID: z.string()
+  },
+  runtimeEnv: {
+    DATABASE_URL: process.env.DATABASE_URL,
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY
+    // ...
+  }
+});
+```
+
+### 2. **Query Client Configuration**
+
+Extend library types for custom configuration:
+
+```typescript
+declare module '@tanstack/react-query' {
+  interface Register {
+    mutationMeta: {
+      invalidatesQuery?: QueryKey;
+      successMessage?: string;
+      errorMessage?: string;
+    };
+  }
+}
+```
+
+## 🪝 Hook Typing
+
+### 1. **Custom Hook Returns**
+
+Type hook return values explicitly:
+
+```typescript
+export const useIsMobile = (): boolean => {
+  const [isMobile, setIsMobile] = useState<boolean>();
+
+  useEffect(() => {
+    // Implementation
+  }, []);
+
+  return !!isMobile;
+};
+```
+
+### 2. **Hook Parameters**
+
+Define parameter types for custom hooks:
+
+```typescript
+type UseApiOptions = {
+  enabled?: boolean;
+  refetchInterval?: number;
+};
+
+export const useApi = <T>(
+  endpoint: string,
+  options?: UseApiOptions
+): UseQueryResult<T> => {
+  // Implementation
+};
+```
+
+## 🎨 UI Component Typing
+
+### 1. **Variant Props**
+
+Use `class-variance-authority` for component variants:
+
+```typescript
+const buttonVariants = cva('base-classes', {
+  variants: {
+    variant: {
+      default: 'default-classes',
+      destructive: 'destructive-classes'
+    },
+    size: {
+      default: 'default-size',
+      sm: 'small-size'
+    }
+  },
+  defaultVariants: {
+    variant: 'default',
+    size: 'default'
+  }
+});
+
+type ButtonProps = ComponentProps<'button'> &
+  VariantProps<typeof buttonVariants> & {
+    asChild?: boolean;
+  };
+```
+
+### 2. **Utility Types**
+
+Use TypeScript utility types for better type safety:
+
+```typescript
+// Extract specific props
+type ButtonSizeProps = Pick<ButtonProps, 'size'>;
+
+// Make props optional
+type PartialButtonProps = Partial<ButtonProps>;
+
+// Exclude props
+type ButtonWithoutVariant = Omit<ButtonProps, 'variant'>;
+```
+
+## 🔍 Type Guards & Validation
+
+### 1. **Type Guards**
+
+Create type guards for runtime checks:
+
+```typescript
+const isUser = (obj: unknown): obj is User => {
+  return typeof obj === 'object' && obj !== null && 'id' in obj && 'email' in obj;
+};
+```
+
+### 2. **Zod Integration**
+
+Use Zod for runtime validation and type inference:
+
+```typescript
+const userSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  email: z.string().email()
+});
+
+type User = z.infer<typeof userSchema>;
+```
+
+## 📦 Module Typing
+
+### 1. **Barrel Exports**
+
+Create typed barrel exports:
+
+```typescript
+// types/index.ts
+export type { User, Session, Response } from './auth';
+export type { ApiResponse } from './api';
+export type { DatabaseSchema } from './database';
+```
+
+### 2. **Global Types**
+
+Define global types in `src/types.ts`:
+
+```typescript
+export type Response<T> = {
+  message: string;
+  data: T;
+  success: boolean;
+};
+
+export type Session = typeof auth.$Infer.Session | null;
+export type ErrorCode = (typeof auth.$ERROR_CODES)[keyof typeof auth.$ERROR_CODES];
+```
+
+## 🚀 Advanced Patterns
+
+### 1. **Conditional Types**
+
+Use conditional types for complex logic:
+
+```typescript
+type ApiResponse<T> = T extends string ? { message: T } : { data: T; success: boolean };
+```
+
+### 2. **Template Literal Types**
+
+Use template literals for string patterns:
+
+```typescript
+type EventName = `on${Capitalize<string>}`;
+type MouseEvent = `mouse${Capitalize<'enter' | 'leave' | 'click'>}`;
+```
+
+### 3. **Mapped Types**
+
+Create mapped types for transformations:
+
+```typescript
+type Optional<T> = {
+  [K in keyof T]?: T[K];
+};
+
+type ReadonlyUser = {
+  readonly [K in keyof User]: User[K];
+};
+```
+
+## 🔧 Best Practices
+
+### 1. **Naming Conventions**
+
+- Use PascalCase for types, interfaces, and enums
+- Use camelCase for variables and functions
+- Use UPPER_CASE for constants
+- Prefix types with descriptive names
+
+```typescript
+// ✅ Good
+type UserProfile = {
+  id: string;
+  displayName: string;
+};
+
+const API_ENDPOINTS = {
+  USERS: '/api/users',
+  AUTH: '/api/auth'
+} as const;
+
+// ❌ Bad
+type profile = {
+  id: string;
+  name: string;
+};
+```
+
+### 2. **Type Assertions**
+
+Avoid type assertions unless necessary:
+
+```typescript
+// ✅ Good - with type guard
+if (isUser(data)) {
+  return data.email;
+}
+
+// ❌ Bad - type assertion
+return (data as User).email;
+```
+
+### 3. **Generic Constraints**
+
+Use constraints for better type safety:
+
+```typescript
+type KeysOfType<T, U> = {
+  [K in keyof T]: T[K] extends U ? K : never;
+}[keyof T];
+
+// Usage
+type StringKeys<T> = KeysOfType<T, string>;
+```
+
+### 4. **Const Assertions**
+
+Use const assertions for literal types:
+
+```typescript
+// ✅ Good
+const themes = ['light', 'dark'] as const;
+type Theme = typeof themes[number]; // 'light' | 'dark'
+
+// ❌ Bad
+const themes = ['light', 'dark'];
+type Theme = string;
+```
+
+## 📋 Code Quality Rules
+
+### 1. **ESLint TypeScript Rules**
+
+```json
+{
+  "@typescript-eslint/no-unused-vars": "error",
+  "@typescript-eslint/no-explicit-any": "error",
+  "@typescript-eslint/prefer-type-imports": "error",
+  "@typescript-eslint/consistent-type-definitions": ["error", "type"]
+}
+```
+
+### 2. **Type Coverage**
+
+- Aim for 100% type coverage
+- Use `any` only when interfacing with untyped libraries
+- Document any type assertions with comments
+
+### 3. **Performance Considerations**
+
+- Use lazy evaluation for complex types
+- Avoid deeply nested conditional types
+- Use utility types instead of manual type construction
+
+## 🔄 Migration & Refactoring
+
+### 1. **Gradual Typing**
+
+When adding types to existing code:
+
+```typescript
+// Step 1: Add basic types
+const user: any = getUserData();
+
+// Step 2: Add specific types
+const user: User = getUserData();
+
+// Step 3: Add full type safety
+const user: User = await getUserData();
+```
+
+### 2. **Type-Only Imports**
+
+Convert regular imports to type-only imports:
+
+```typescript
+// Before
+import { User } from './types';
+
+// After
+import type { User } from './types';
+```
+
+This comprehensive TypeScript guide ensures type safety, maintainability, and developer
+experience across the entire Next.js application.

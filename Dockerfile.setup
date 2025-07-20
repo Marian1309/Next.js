@@ -1,0 +1,5 @@
+docker build --pull -t bun-nextjs .
+
+docker run -d -p 3000:3000 bun-nextjs
+
+docker stop *

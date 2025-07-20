@@ -1,0 +1,43 @@
+- uncomment globals.css styles
+- add global provider
+- move the docs folder to the root
+- move search api to the api folder
+- package.json postinstall
+"postinstall": "fumadocs-mdx",
+- wrap in the next.config.ts
+import { createMDX } from 'fumadocs-mdx/next';
+
+const withMDX = createMDX();
+- add source.config.ts
+import {
+  defineConfig,
+  defineDocs,
+  frontmatterSchema,
+  metaSchema
+} from 'fumadocs-mdx/config';
+
+export const docs = defineDocs({
+  docs: {
+    schema: frontmatterSchema
+  },
+  meta: {
+    schema: metaSchema
+  },
+  dir: './src/docs'
+});
+
+export default defineConfig({
+  mdxOptions: {
+    // MDX options
+  }
+});
+- lib source.ts
+import { loader } from 'fumadocs-core/source';
+
+import { docs } from '@/.source';
+
+export const source = loader({
+  // it assigns a URL to your pages
+  baseUrl: '/docs',
+  source: docs.toFumadocsSource()
+});
