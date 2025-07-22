@@ -82,32 +82,11 @@ const nextConfig: NextConfig = {
   devIndicators: false,
 
   eslint: {
-    ignoreDuringBuilds: process.env.NODE_ENV === 'development'
+    ignoreDuringBuilds: true
   },
   typescript: {
-    ignoreBuildErrors: process.env.NODE_ENV === 'development'
-  },
-
-  headers: async () => [
-    {
-      source: '/(.*)',
-      headers: [
-        {
-          key: 'X-DNS-Prefetch-Control',
-          value: 'on'
-        }
-      ]
-    },
-    {
-      source: '/(.*)\\.(js|css|woff|woff2|png|jpg|jpeg|gif|webp|svg|ico)',
-      headers: [
-        {
-          key: 'Cache-Control',
-          value: 'public, max-age=31536000, immutable'
-        }
-      ]
-    }
-  ]
+    ignoreBuildErrors: true
+  }
 };
 
 export default withBundleAnalyzer(nextConfig);

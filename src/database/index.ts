@@ -24,9 +24,9 @@ const createDatabaseConnection = () => {
     schema: {
       ...authSchema
       // ...schema
-    },
+    }
     // Add logger in development for query debugging
-    logger: env.NODE_ENV === 'development'
+    // logger: env.NODE_ENV === 'development'
   });
 };
 

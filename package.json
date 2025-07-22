@@ -42,16 +42,17 @@
   },
   "lint-staged": {
     "*.{ts,tsx}": [
-      "bun run format"
+      "bun run format",
+      "bun run lint"
     ],
     "*": "pretty-quick --staged"
   },
   "browserslist": {
     "production": [
-      "> 0.5%",
-      "not dead",
-      "not op_mini all",
-      "not ie <= 11"
+      "last 2 chrome versions",
+      "last 2 firefox versions",
+      "last 2 safari versions",
+      "last 2 edge versions"
     ],
     "development": [
       "last 1 chrome version"
@@ -128,6 +129,7 @@
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.525.0",
     "motion": "^12.23.6",
+    "nanoid": "^5.1.5",
     "next": "15.3.5",
     "next-themes": "^0.4.6",
     "nextjs-toploader": "^3.8.16",

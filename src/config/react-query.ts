@@ -47,7 +47,7 @@ const defaultQueryClientConfig: QueryClientConfig = {
         toast.success(mutation.meta.successMessage);
       }
     },
-    onError: (error: any, __, ___, mutation) => {
+    onError: (error: Error, __, ___, mutation) => {
       const errorMessage =
         mutation?.meta?.errorMessage || error?.message || 'An unexpected error occurred';
 

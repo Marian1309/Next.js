@@ -16,4 +16,5 @@ export const databaseTakeUniqueOrThrow = <T extends unknown[]>(
   return values[0];
 };
 
-export const { selectOnly, selectExcept, getCount } = createSelectorUtils(database);
+export const { selectOnly, selectExcept, getCount, doesExist } =
+  createSelectorUtils(database);

@@ -5,8 +5,6 @@ import { useCallback } from 'react';
 import { MoonIcon, SunIcon } from 'lucide-react';
 import { useTheme } from 'next-themes';
 
-import { logger } from '@/helpers/logger';
-
 import { Button } from '../ui/button';
 
 import type { AnimationStart, AnimationVariant } from './utils/theme-animations';
@@ -29,15 +27,12 @@ const ThemeToggleButton = ({
 }: ThemeToggleAnimationProps) => {
   const { theme, setTheme } = useTheme();
 
-  const updateStyles = useCallback((css: string, name: string) => {
+  const updateStyles = useCallback((css: string) => {
     if (typeof window === 'undefined') {
       return;
     }
 
     let styleElement = document.getElementById(styleId) as HTMLStyleElement;
-
-    logger.info('style ELement', styleElement);
-    logger.info('name', name);
 
     if (!styleElement) {
       styleElement = document.createElement('style');
@@ -46,14 +41,12 @@ const ThemeToggleButton = ({
     }
 
     styleElement.textContent = css;
-
-    logger.info('content updated');
   }, []);
 
   const toggleTheme = useCallback(() => {
     const animation = createAnimation(variant, start, url);
 
-    updateStyles(animation.css, animation.name);
+    updateStyles(animation.css);
 
     if (typeof window === 'undefined') {
       return;
