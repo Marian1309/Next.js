@@ -18,16 +18,5 @@ export const middleware = async (request: NextRequest) => {
 
 // Apply middleware only to selected routes
 export const config = {
-  matcher: [
-    '/auth/sign-in',
-    '/auth/sign-up',
-    '/auth/magic-link',
-    '/auth/forgot-password',
-    '/auth/two-factor',
-    '/auth/recover-account',
-    '/auth/reset-password',
-    '/auth/sign-out',
-    '/auth/settings',
-    '/auth/callback'
-  ]
+  matcher: ['/auth/:path*']
 };

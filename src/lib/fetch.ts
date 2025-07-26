@@ -16,7 +16,7 @@ export const $fetch = createFetch({
 });
 
 export const $fetchN8N = createFetch({
-  baseURL: 'https://n8n-self.up.railway.app',
+  baseURL: 'https://pidchashyi.up.railway.app',
   plugins: [
     logger({
       enabled:
