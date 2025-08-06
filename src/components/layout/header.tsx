@@ -4,7 +4,7 @@ interface Properties {
   className?: string;
 }
 
-const Header = ({ className = '' }: Properties) => {
+const Header = ({ className }: Properties) => {
   return <header className={cn(className)}></header>;
 };
 

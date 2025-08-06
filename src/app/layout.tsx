@@ -19,7 +19,14 @@ export const metadata: Metadata = {
   title: 'Next.js 15',
   description: 'Next.js 15 Starter KIT',
   metadataBase: new URL(env.NEXT_PUBLIC_BASE_URL),
-  robots: { index: true, follow: true, googleBot: { index: true, follow: true } }
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true
+    }
+  }
 };
 
 const roboto = Roboto({

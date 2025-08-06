@@ -20,13 +20,9 @@ interface Properties {
 }
 
 const ErrorLayout = (params: Properties) => {
-  const {
-    title = 'Сторінку не знайдено',
-    description = 'На жаль, сторінка, яку ви шукаєте, не існує або була переміщена.'
-  } = params;
+  const { title, description } = params;
 
   const router = useRouter();
-
   const isMounted = useIsMounted();
 
   const lang = isMounted ? (document.documentElement.lang as 'uk' | 'en') : 'en';
@@ -72,6 +68,7 @@ const ErrorLayout = (params: Properties) => {
               {lang === 'uk'
                 ? 'Якщо ви вважаєте, що це помилка, напишіть на '
                 : 'If you believe this is an error, please write to '}
+
               <span className="cursor-pointer transition-all after:w-0 hover:underline">
                 pidchashymaryan@gmail.com
               </span>

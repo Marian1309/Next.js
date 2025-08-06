@@ -66,7 +66,9 @@ const nextConfig: NextConfig = {
 
     optimizeCss: true,
 
-    gzipSize: true
+    gzipSize: true,
+
+    devtoolSegmentExplorer: true
   },
 
   serverExternalPackages: ['sharp'],
